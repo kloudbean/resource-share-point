@@ -51,6 +51,8 @@ import {
   Search,
   Shield,
   ShieldOff,
+  BarChart3,
+  Link as LinkIcon,
 } from "lucide-react";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 
@@ -308,6 +310,47 @@ const AdminPanel = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/admin/analytics")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Analytics Dashboard</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Track agent engagement and content views
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/admin/links")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                  <LinkIcon className="h-6 w-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Manage Links</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Update Google Drive URLs for resources
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

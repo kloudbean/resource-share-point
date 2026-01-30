@@ -50,6 +50,77 @@ export type Database = {
         }
         Relationships: []
       }
+      content_views: {
+        Row: {
+          agent_id: string
+          duration_seconds: number | null
+          id: string
+          resource_key: string
+          session_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          agent_id: string
+          duration_seconds?: number | null
+          id?: string
+          resource_key: string
+          session_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          agent_id?: string
+          duration_seconds?: number | null
+          id?: string
+          resource_key?: string
+          session_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_views_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_links: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          drive_url: string | null
+          id: string
+          is_active: boolean
+          resource_key: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          drive_url?: string | null
+          id?: string
+          is_active?: boolean
+          resource_key: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          drive_url?: string | null
+          id?: string
+          is_active?: boolean
+          resource_key?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

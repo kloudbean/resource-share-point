@@ -164,12 +164,14 @@ const Auth = () => {
         });
       }
     } else if (data.user) {
-      // Create agent profile
-      const { error: profileError } = await supabase.from("agents").insert({
-        user_id: data.user.id,
-        reco_number: signupRecoNumber,
-        full_name: signupFullName,
-        email: signupEmail,
+      // Create agent profile using edge function (bypasses RLS)
+      const { error: profileError } = await supabase.functions.invoke("create-agent-profile", {
+        body: {
+          userId: data.user.id,
+          recoNumber: signupRecoNumber,
+          fullName: signupFullName,
+          email: signupEmail,
+        },
       });
 
       if (profileError) {
@@ -178,7 +180,7 @@ const Auth = () => {
 
       toast({
         title: "Registration Successful",
-        description: "Please check your email to verify your account, or you can login now if email confirmation is disabled.",
+        description: "Your account has been created. An administrator will activate your account shortly.",
       });
     }
     
