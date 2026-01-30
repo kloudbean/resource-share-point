@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,179 +37,49 @@ import {
   User,
   Shield,
   Loader2,
+  LucideIcon,
 } from "lucide-react";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 
-interface DashboardButton {
+// Icon mapping for database resources
+const iconMap: Record<string, LucideIcon> = {
+  scripts: FileText,
+  training: Video,
+  coaching: BookOpen,
+  social: Megaphone,
+  resale: Home,
+  preconstruction: Building,
+  educational: GraduationCap,
+  seasonal: Calendar,
+  "personal-brand": Sparkles,
+  "email-templates": Mail,
+  "content-calendars": CalendarDays,
+  "marketing-support": HeartHandshake,
+  "deal-processing": FileCheck,
+  "direct-deposit": CreditCard,
+  vendors: Users,
+  "office-info": MapPin,
+  "meeting-room": CalendarPlus,
+  "precon-portal": KeyRound,
+};
+
+interface ResourceLink {
   id: string;
+  resource_key: string;
   title: string;
-  description: string;
-  icon: React.ElementType;
+  description: string | null;
   category: string;
-  driveLink: string;
+  drive_url: string | null;
+  is_active: boolean;
 }
-
-const dashboardButtons: DashboardButton[] = [
-  // Resources
-  {
-    id: "scripts",
-    title: "Scripts Library",
-    description: "Mike Ferry, Buyer/Seller, Objections & more",
-    icon: FileText,
-    category: "Resources",
-    driveLink: "#scripts-library",
-  },
-  {
-    id: "training",
-    title: "Training Videos",
-    description: "Video tutorials and training content",
-    icon: Video,
-    category: "Resources",
-    driveLink: "#training-videos",
-  },
-  {
-    id: "coaching",
-    title: "Coaching Materials",
-    description: "KN's worksheets – PDF & Excel",
-    icon: BookOpen,
-    category: "Resources",
-    driveLink: "#coaching-materials",
-  },
-
-  // Marketing
-  {
-    id: "social",
-    title: "Social & Marketing",
-    description: "Social media assets and marketing materials",
-    icon: Megaphone,
-    category: "Marketing",
-    driveLink: "#social-marketing",
-  },
-  {
-    id: "resale",
-    title: "Resale",
-    description: "Resale property marketing materials",
-    icon: Home,
-    category: "Marketing",
-    driveLink: "#resale",
-  },
-  {
-    id: "preconstruction",
-    title: "Pre-Construction",
-    description: "Pre-construction project materials",
-    icon: Building,
-    category: "Marketing",
-    driveLink: "#preconstruction",
-  },
-  {
-    id: "educational",
-    title: "Educational",
-    description: "Educational content and guides",
-    icon: GraduationCap,
-    category: "Marketing",
-    driveLink: "#educational",
-  },
-  {
-    id: "seasonal",
-    title: "Seasonal",
-    description: "Holiday and seasonal marketing content",
-    icon: Calendar,
-    category: "Marketing",
-    driveLink: "#seasonal",
-  },
-  {
-    id: "personal-brand",
-    title: "Daily Life / Personal Brand",
-    description: "Personal branding and lifestyle content",
-    icon: Sparkles,
-    category: "Marketing",
-    driveLink: "#personal-brand",
-  },
-
-  // Communications
-  {
-    id: "email-templates",
-    title: "Email Templates",
-    description: "Pre-written email templates",
-    icon: Mail,
-    category: "Communications",
-    driveLink: "#email-templates",
-  },
-  {
-    id: "content-calendars",
-    title: "Content Calendars",
-    description: "Monthly content planning calendars",
-    icon: CalendarDays,
-    category: "Communications",
-    driveLink: "#content-calendars",
-  },
-
-  // Support
-  {
-    id: "marketing-support",
-    title: "Marketing Support",
-    description: "Request marketing assistance",
-    icon: HeartHandshake,
-    category: "Support",
-    driveLink: "#marketing-support",
-  },
-  {
-    id: "deal-processing",
-    title: "Deal Processing",
-    description: "How to submit a deal & required documents",
-    icon: FileCheck,
-    category: "Support",
-    driveLink: "#deal-processing",
-  },
-  {
-    id: "direct-deposit",
-    title: "Direct Deposit Info",
-    description: "Information required & process explained",
-    icon: CreditCard,
-    category: "Support",
-    driveLink: "#direct-deposit",
-  },
-  {
-    id: "vendors",
-    title: "Vendors",
-    description: "Approved vendor list and contacts",
-    icon: Users,
-    category: "Support",
-    driveLink: "#vendors",
-  },
-
-  // Office
-  {
-    id: "office-info",
-    title: "Office Information",
-    description: "Hours, address & contact details",
-    icon: MapPin,
-    category: "Office",
-    driveLink: "#office-info",
-  },
-  {
-    id: "meeting-room",
-    title: "Meeting Room Booking",
-    description: "Reserve meeting rooms",
-    icon: CalendarPlus,
-    category: "Office",
-    driveLink: "#meeting-room",
-  },
-  {
-    id: "precon-portal",
-    title: "Pre-Construction Portal",
-    description: "Access the pre-con portal",
-    icon: KeyRound,
-    category: "Office",
-    driveLink: "#precon-portal",
-  },
-];
 
 const categories = ["Resources", "Marketing", "Communications", "Support", "Office"];
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, agent, loading, isAdmin, isActive, signOut } = useAuth();
+  const [resources, setResources] = useState<ResourceLink[]>([]);
+  const [loadingResources, setLoadingResources] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -216,12 +87,44 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    try {
+      const { data } = await supabase
+        .from("resource_links")
+        .select("*")
+        .eq("is_active", true)
+        .order("category", { ascending: true });
+
+      setResources(data || []);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
   };
 
-  const handleButtonClick = (button: DashboardButton) => {
+  const trackView = async (resourceKey: string) => {
+    if (!agent) return;
+    try {
+      await supabase.from("content_views").insert({
+        agent_id: agent.id,
+        resource_key: resourceKey,
+      });
+    } catch (error) {
+      console.error("Error tracking view:", error);
+    }
+  };
+
+  const handleButtonClick = async (resource: ResourceLink) => {
     if (!isActive) {
       toast({
         variant: "destructive",
@@ -230,12 +133,18 @@ const Dashboard = () => {
       });
       return;
     }
-    // In production, these would link to actual Google Drive folders
-    toast({
-      title: `Opening ${button.title}`,
-      description: "This would redirect to the Google Drive folder in production.",
-    });
-    // window.open(button.driveLink, '_blank');
+
+    // Track the view
+    await trackView(resource.resource_key);
+
+    if (resource.drive_url) {
+      window.open(resource.drive_url, "_blank");
+    } else {
+      toast({
+        title: `${resource.title}`,
+        description: "Link not configured yet. Contact an administrator.",
+      });
+    }
   };
 
   const getInitials = (name: string | null) => {
@@ -348,45 +257,53 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Access all your resources, training materials, and marketing assets in one place.</p>
         </div>
 
-        {categories.map((category) => {
-          const categoryButtons = dashboardButtons.filter((b) => b.category === category);
-          return (
-            <section key={category} className="mb-10">
-              <h3 className="font-display text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                <span className="h-1 w-6 bg-accent rounded-full" />
-                {category}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {categoryButtons.map((button) => {
-                  const IconComponent = button.icon;
-                  return (
-                    <Card
-                      key={button.id}
-                      className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-accent/10 hover:-translate-y-1 border-border/50 hover:border-accent/50"
-                      onClick={() => handleButtonClick(button)}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-accent group-hover:text-accent-foreground transition-colors duration-300">
-                            <IconComponent className="h-6 w-6" />
+        {loadingResources ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          categories.map((category) => {
+            const categoryResources = resources.filter((r) => r.category === category);
+            if (categoryResources.length === 0) return null;
+            
+            return (
+              <section key={category} className="mb-10">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <span className="h-1 w-6 bg-accent rounded-full" />
+                  {category}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {categoryResources.map((resource) => {
+                    const IconComponent = iconMap[resource.resource_key] || FileText;
+                    return (
+                      <Card
+                        key={resource.id}
+                        className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-accent/10 hover:-translate-y-1 border-border/50 hover:border-accent/50"
+                        onClick={() => handleButtonClick(resource)}
+                      >
+                        <CardContent className="p-5">
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-accent group-hover:text-accent-foreground transition-colors duration-300">
+                              <IconComponent className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                {resource.title}
+                              </h4>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                {resource.description}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                              {button.title}
-                            </h4>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                              {button.description}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })
+        )}
       </main>
 
       {/* Footer */}
