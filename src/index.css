@@ -8,83 +8,89 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 25% 10%;
+    /* REMAX Excellence Branding - Navy Blue & Red */
+    --background: 220 30% 97%;
+    --foreground: 220 50% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 220 50% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 220 50% 15%;
 
-    --primary: 220 60% 25%;
-    --primary-foreground: 210 40% 98%;
+    /* Navy Blue Primary */
+    --primary: 220 50% 18%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 30% 92%;
-    --secondary-foreground: 220 25% 15%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 220 50% 15%;
 
-    --muted: 210 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 15% 45%;
 
-    --accent: 45 50% 55%;
-    --accent-foreground: 220 25% 10%;
+    /* REMAX Red Accent */
+    --accent: 4 80% 56%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 220 60% 25%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 220 50% 18%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 45 50% 55%;
-    --sidebar-primary-foreground: 220 25% 10%;
-    --sidebar-accent: 220 20% 18%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 45 50% 55%;
+    /* Sidebar - Dark Navy */
+    --sidebar-background: 220 50% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 4 80% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 45% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 40% 20%;
+    --sidebar-ring: 4 80% 56%;
   }
 
   .dark {
-    --background: 220 25% 8%;
-    --foreground: 210 20% 95%;
+    /* REMAX Dark Mode */
+    --background: 220 50% 8%;
+    --foreground: 0 0% 98%;
 
-    --card: 220 25% 12%;
-    --card-foreground: 210 20% 95%;
+    --card: 220 45% 12%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 25% 12%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 220 45% 12%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 45 50% 55%;
-    --primary-foreground: 220 25% 10%;
+    /* Red Primary in Dark Mode */
+    --primary: 4 80% 56%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 210 20% 95%;
+    --secondary: 220 40% 18%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 20% 18%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 220 35% 18%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 220 20% 22%;
-    --accent-foreground: 210 20% 95%;
+    --accent: 220 45% 22%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 35%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 45 50% 55%;
+    --border: 220 40% 20%;
+    --input: 220 40% 20%;
+    --ring: 4 80% 56%;
     
-    --sidebar-background: 220 25% 6%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 45 50% 55%;
-    --sidebar-primary-foreground: 220 25% 10%;
-    --sidebar-accent: 220 20% 15%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 20% 15%;
-    --sidebar-ring: 45 50% 55%;
+    --sidebar-background: 220 50% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 4 80% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 45% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 40% 15%;
+    --sidebar-ring: 4 80% 56%;
   }
 }
 

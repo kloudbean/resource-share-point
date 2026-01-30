@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Building2, KeyRound, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { KeyRound, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import remaxLogo from "@/assets/remax-excellence-logo.png";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -185,15 +186,23 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/50 to-background p-4">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50" />
+    <div className="min-h-screen flex items-center justify-center bg-primary p-4 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')]" />
       
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-border/50 backdrop-blur-sm">
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <Building2 className="h-8 w-8" />
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/90" />
+      
+      <Card className="w-full max-w-md relative z-10 shadow-2xl border-0 backdrop-blur-sm">
+        <CardHeader className="text-center pb-2 pt-8">
+          <div className="mx-auto mb-6">
+            <img 
+              src={remaxLogo} 
+              alt="REMAX Excellence" 
+              className="h-14 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="font-display text-3xl font-bold text-foreground">
+          <CardTitle className="font-display text-2xl font-bold text-foreground">
             Agent Portal
           </CardTitle>
           <CardDescription className="text-muted-foreground mt-2">
