@@ -1,10 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
-import { User } from "@supabase/supabase-js";
 import {
   LogOut,
   FileText,
@@ -25,6 +33,9 @@ import {
   MapPin,
   CalendarPlus,
   KeyRound,
+  User,
+  Shield,
+  Loader2,
 } from "lucide-react";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 
@@ -197,62 +208,28 @@ const categories = ["Resources", "Marketing", "Communications", "Support", "Offi
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [agentName, setAgentName] = useState<string>("");
+  const { user, agent, loading, isAdmin, isActive, signOut } = useAuth();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        if (!session?.user) {
-          navigate("/auth");
-        } else {
-          // Fetch agent profile
-          setTimeout(() => {
-            fetchAgentProfile(session.user.id);
-          }, 0);
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        fetchAgentProfile(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const fetchAgentProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("agents")
-      .select("full_name, reco_number")
-      .eq("user_id", userId)
-      .single();
-
-    if (data) {
-      setAgentName(data.full_name || `Agent ${data.reco_number}`);
-    }
-  };
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Logout Failed",
-        description: error.message,
-      });
-    } else {
+    if (!loading && !user) {
       navigate("/auth");
     }
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
   };
 
   const handleButtonClick = (button: DashboardButton) => {
+    if (!isActive) {
+      toast({
+        variant: "destructive",
+        title: "Account Not Active",
+        description: "Your account is pending activation. Contact an administrator.",
+      });
+      return;
+    }
     // In production, these would link to actual Google Drive folders
     toast({
       title: `Opening ${button.title}`,
@@ -261,7 +238,27 @@ const Dashboard = () => {
     // window.open(button.driveLink, '_blank');
   };
 
+  const getInitials = (name: string | null) => {
+    if (!name) return "AG";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) return null;
+
+  const agentName = agent?.full_name || `Agent ${agent?.reco_number || ""}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,23 +274,75 @@ const Dashboard = () => {
               />
               <div className="hidden sm:block border-l border-primary-foreground/20 pl-4">
                 <h1 className="font-display text-lg font-bold">Agent Portal</h1>
-                <p className="text-sm text-primary-foreground/70">Welcome, {agentName || "Agent"}</p>
+                <p className="text-sm text-primary-foreground/70">Welcome, {agentName}</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout} 
-              className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
+            
+            <div className="flex items-center gap-3">
+              {isAdmin && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/admin")}
+                  className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Button>
+              )}
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-primary-foreground/10">
+                    <Avatar className="h-10 w-10 border-2 border-primary-foreground/30">
+                      <AvatarImage src={agent?.avatar_url || undefined} alt={agentName} />
+                      <AvatarFallback className="bg-primary-foreground text-primary font-semibold">
+                        {getInitials(agent?.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{agent?.full_name || "Agent"}</p>
+                      <p className="text-xs text-muted-foreground">{agent?.reco_number}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    My Profile
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Admin Panel
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {!isActive && (
+          <Card className="mb-6 border-amber-500 bg-amber-50">
+            <CardContent className="pt-6">
+              <p className="text-amber-800 text-center font-medium">
+                ⚠️ Your account is pending activation. Contact an administrator to activate your account. Some features may be restricted.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+        
         <div className="mb-8">
           <h2 className="font-display text-3xl font-bold text-foreground mb-2">Your Dashboard</h2>
           <p className="text-muted-foreground">Access all your resources, training materials, and marketing assets in one place.</p>
