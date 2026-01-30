@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 import {
-  Building2,
   LogOut,
   FileText,
   Megaphone,
@@ -27,6 +26,7 @@ import {
   CalendarPlus,
   KeyRound,
 } from "lucide-react";
+import remaxLogo from "@/assets/remax-excellence-logo.png";
 
 interface DashboardButton {
   id: string;
@@ -266,19 +266,25 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="container mx-auto px-4 py-4">
+      <header className="sticky top-0 z-50 border-b border-border bg-primary text-primary-foreground shadow-md">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="font-display text-xl font-bold text-foreground">Agent Portal</h1>
-                <p className="text-sm text-muted-foreground">Welcome back, {agentName || "Agent"}</p>
+            <div className="flex items-center gap-4">
+              <img 
+                src={remaxLogo} 
+                alt="REMAX Excellence" 
+                className="h-10 w-auto object-contain brightness-0 invert"
+              />
+              <div className="hidden sm:block border-l border-primary-foreground/20 pl-4">
+                <h1 className="font-display text-lg font-bold">Agent Portal</h1>
+                <p className="text-sm text-primary-foreground/70">Welcome, {agentName || "Agent"}</p>
               </div>
             </div>
-            <Button variant="outline" onClick={handleLogout} className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleLogout} 
+              className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign Out</span>
             </Button>
@@ -335,10 +341,15 @@ const Dashboard = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-muted/30 py-6">
+      <footer className="border-t border-border bg-primary text-primary-foreground py-6">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2024 Agent Portal. All content is managed via Google Drive.
+          <img 
+            src={remaxLogo} 
+            alt="REMAX Excellence" 
+            className="h-8 mx-auto mb-3 brightness-0 invert opacity-80"
+          />
+          <p className="text-sm text-primary-foreground/70">
+            © 2024 REMAX Excellence. All rights reserved.
           </p>
         </div>
       </footer>
