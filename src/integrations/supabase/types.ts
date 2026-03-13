@@ -50,6 +50,39 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_views: {
         Row: {
           agent_id: string
@@ -118,6 +151,48 @@ export type Database = {
           resource_key?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      shared_documents: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
         }
         Relationships: []
       }

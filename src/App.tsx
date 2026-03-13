@@ -12,6 +12,8 @@ import Analytics from "./pages/Analytics";
 import LinkManager from "./pages/LinkManager";
 import Quote from "./pages/Quote";
 import PendingActivation from "./pages/PendingActivation";
+import AgentDirectory from "./pages/AgentDirectory";
+import Documents from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
           <Route path="/admin/links" element={<LinkManager />} />
           <Route path="/pending" element={<PendingActivation />} />
           <Route path="/quote" element={<Quote />} />
+          <Route path="/directory" element={<AgentDirectory />} />
+          <Route path="/documents" element={<Documents />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
