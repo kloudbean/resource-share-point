@@ -11,6 +11,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Analytics from "./pages/Analytics";
 import LinkManager from "./pages/LinkManager";
 import Quote from "./pages/Quote";
+import PendingActivation from "./pages/PendingActivation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
