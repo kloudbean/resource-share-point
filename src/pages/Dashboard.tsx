@@ -82,10 +82,14 @@ const Dashboard = () => {
   const [loadingResources, setLoadingResources] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
+    if (!loading) {
+      if (!user) {
+        navigate("/auth");
+      } else if (!isActive && agent !== null) {
+        navigate("/pending");
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isActive, agent, navigate]);
 
   useEffect(() => {
     fetchResources();
