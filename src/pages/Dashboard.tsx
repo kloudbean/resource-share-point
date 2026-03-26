@@ -4,10 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HeroBanner from "@/components/dashboard/HeroBanner";
 import QuickStats from "@/components/dashboard/QuickStats";
 import AnnouncementsFeed from "@/components/dashboard/AnnouncementsFeed";
+import CalendarEvents from "@/components/dashboard/CalendarEvents";
+import TrainingCourses from "@/components/dashboard/TrainingCourses";
+import PreConSection from "@/components/dashboard/PreConSection";
+import SupportChat from "@/components/dashboard/SupportChat";
+import RoomBooking from "@/components/dashboard/RoomBooking";
 import ResourceGrid from "@/components/dashboard/ResourceGrid";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 
@@ -72,9 +78,9 @@ const Dashboard = () => {
         onLogout={async () => { await signOut(); navigate("/auth"); }}
       />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 space-y-10">
         {!isActive && (
-          <Card className="mb-6 border-amber-500 bg-amber-50">
+          <Card className="border-amber-500 bg-amber-50">
             <CardContent className="pt-6">
               <p className="text-amber-800 text-center font-medium">
                 ⚠️ Your account is pending activation. Some features may be restricted.
@@ -83,6 +89,7 @@ const Dashboard = () => {
           </Card>
         )}
 
+        {/* Hero Banner */}
         <HeroBanner
           agentName={agentName}
           avatarUrl={agent?.avatar_url || null}
@@ -90,21 +97,66 @@ const Dashboard = () => {
           recoNumber={agent?.reco_number || null}
         />
 
-        <QuickStats agentId={agent?.id} />
+        {/* Section 1: Calendar + Training Courses (side by side on desktop) */}
+        <section>
+          <CalendarEvents agentId={agent?.id} />
+        </section>
 
-        <AnnouncementsFeed />
+        <Separator />
 
-        <div className="mb-4">
-          <h2 className="font-display text-2xl font-bold text-foreground">Your Resources</h2>
-          <p className="text-muted-foreground text-sm">Access training materials, marketing assets, and more.</p>
-        </div>
+        {/* Section 2: Training Courses */}
+        <section>
+          <TrainingCourses agentId={agent?.id} />
+        </section>
 
-        <ResourceGrid
-          resources={resources}
-          loading={loadingResources}
-          isActive={isActive}
-          agentId={agent?.id}
-        />
+        <Separator />
+
+        {/* Section 3: Quick Stats + Announcements */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <QuickStats agentId={agent?.id} />
+          </div>
+          <div>
+            <AnnouncementsFeed />
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* Section 4: Pre-Construction */}
+        <section>
+          <PreConSection />
+        </section>
+
+        <Separator />
+
+        {/* Section 5: Marketing & Tech Support */}
+        <section>
+          <SupportChat agentId={agent?.id} userId={user?.id} />
+        </section>
+
+        <Separator />
+
+        {/* Section 6: Office & Meeting Rooms */}
+        <section>
+          <RoomBooking agentId={agent?.id} />
+        </section>
+
+        <Separator />
+
+        {/* Section 7: Resources */}
+        <section>
+          <div className="mb-4">
+            <h2 className="font-display text-2xl font-bold text-foreground">Your Resources</h2>
+            <p className="text-muted-foreground text-sm">Access training materials, marketing assets, and more.</p>
+          </div>
+          <ResourceGrid
+            resources={resources}
+            loading={loadingResources}
+            isActive={isActive}
+            agentId={agent?.id}
+          />
+        </section>
       </main>
 
       <footer className="border-t border-border bg-primary text-primary-foreground py-6">
