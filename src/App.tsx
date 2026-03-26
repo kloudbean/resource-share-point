@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
 import Analytics from "./pages/Analytics";
 import LinkManager from "./pages/LinkManager";
+import AdminVendors from "./pages/AdminVendors";
 import Quote from "./pages/Quote";
 import PendingActivation from "./pages/PendingActivation";
 import AgentDirectory from "./pages/AgentDirectory";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/analytics" element={<Analytics />} />
           <Route path="/admin/links" element={<LinkManager />} />
+          <Route path="/admin/vendors" element={<AdminVendors />} />
           <Route path="/pending" element={<PendingActivation />} />
           <Route path="/quote" element={<Quote />} />
           <Route path="/directory" element={<AgentDirectory />} />

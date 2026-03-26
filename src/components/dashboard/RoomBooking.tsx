@@ -13,6 +13,8 @@ import { MapPin, Users, DoorOpen, Clock, CalendarDays, Video, CheckCircle2 } fro
 import { format, isSameDay, parseISO, addHours, setHours, setMinutes } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
+import RoomBookingShowcase from "@/components/dashboard/RoomBookingShowcase";
 
 interface Location {
   id: string;
@@ -52,6 +54,10 @@ const timeSlots = Array.from({ length: 20 }, (_, i) => {
 });
 
 const RoomBooking = ({ agentId }: RoomBookingProps) => {
+  if (PORTAL_SHOWCASE) {
+    return <RoomBookingShowcase />;
+  }
+
   const [locations, setLocations] = useState<Location[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -130,13 +136,18 @@ const RoomBooking = ({ agentId }: RoomBookingProps) => {
     }
   };
 
+  const mapSrc = (loc: Location) => {
+    const q = loc.address || loc.name;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+  };
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
         <DoorOpen className="h-6 w-6 text-accent" />
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Office & Meeting Rooms</h2>
-          <p className="text-sm text-muted-foreground">Book rooms for in-person or virtual meetings</p>
+          <h2 className="font-display text-2xl font-bold text-foreground">Office locations &amp; room booking</h2>
+          <p className="text-sm text-muted-foreground">Mississauga &amp; Brampton — maps, hours, and room reservations</p>
         </div>
       </div>
 
@@ -170,12 +181,31 @@ const RoomBooking = ({ agentId }: RoomBookingProps) => {
           </TabsList>
           {locations.map((loc) => (
             <TabsContent key={loc.id} value={loc.id}>
-              {loc.address && (
-                <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> {loc.address}
-                  {loc.phone && <span className="ml-3">📞 {loc.phone}</span>}
-                </p>
-              )}
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div className="space-y-2">
+                  <iframe
+                    title={`Map ${loc.name}`}
+                    className="w-full h-52 rounded-lg border border-border"
+                    src={mapSrc(loc)}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 text-sm">
+                  <p className="font-semibold text-foreground mb-2">{loc.name}</p>
+                  {loc.address && (
+                    <p className="text-muted-foreground flex items-start gap-2 mb-2">
+                      <MapPin className="h-4 w-4 shrink-0 mt-0.5" /> {loc.address}
+                    </p>
+                  )}
+                  {loc.phone && (
+                    <a href={`tel:${loc.phone.replace(/\D/g, "")}`} className="text-destructive font-medium hover:underline">
+                      {loc.phone}
+                    </a>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-3">Mon–Fri 9:00–17:00 · Sat by appointment</p>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {rooms
                   .filter((r) => r.location_id === loc.id)

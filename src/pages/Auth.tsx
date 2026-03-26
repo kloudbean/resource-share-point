@@ -10,9 +10,15 @@ import { toast } from "@/hooks/use-toast";
 import { KeyRound, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 import { z } from "zod";
+import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
 
-const loginSchema = z.object({
+const loginRecoSchema = z.object({
   recoNumber: z.string().min(1, "RECO Number is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const loginEmailSchema = z.object({
+  email: z.string().email("Valid email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -34,9 +40,13 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Login form state
+  const [loginMode, setLoginMode] = useState<"email" | "reco">("email");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginRecoNumber, setLoginRecoNumber] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
   
   // Signup form state
   const [signupFullName, setSignupFullName] = useState("");
@@ -67,27 +77,42 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrors({});
-    
-    try {
-      loginSchema.parse({ recoNumber: loginRecoNumber, password: loginPassword });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            errors[err.path[0] as string] = err.message;
-          }
-        });
-        setLoginErrors(errors);
-        return;
+
+    if (loginMode === "email") {
+      try {
+        loginEmailSchema.parse({ email: loginEmail, password: loginPassword });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errors: Record<string, string> = {};
+          error.errors.forEach((err) => {
+            if (err.path[0]) errors[err.path[0] as string] = err.message;
+          });
+          setLoginErrors(errors);
+          return;
+        }
+      }
+    } else {
+      try {
+        loginRecoSchema.parse({ recoNumber: loginRecoNumber, password: loginPassword });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errors: Record<string, string> = {};
+          error.errors.forEach((err) => {
+            if (err.path[0]) errors[err.path[0] as string] = err.message;
+          });
+          setLoginErrors(errors);
+          return;
+        }
       }
     }
 
     setLoading(true);
-    
-    // Use RECO number as email identifier
-    const email = `${loginRecoNumber.toLowerCase().replace(/\s+/g, '')}@agent.portal`;
-    
+
+    const email =
+      loginMode === "email"
+        ? loginEmail.trim().toLowerCase()
+        : `${loginRecoNumber.toLowerCase().replace(/\s+/g, "")}@agent.portal`;
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password: loginPassword,
@@ -96,14 +121,38 @@ const Auth = () => {
     if (error) {
       toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: error.message === "Invalid login credentials" 
-          ? "Invalid RECO Number or password. Please try again." 
-          : error.message,
+        title: "Login failed",
+        description:
+          error.message === "Invalid login credentials"
+            ? "Invalid email/RECO or password. Please try again."
+            : error.message,
       });
     }
-    
+
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    const email = forgotEmail.trim() || loginEmail.trim();
+    if (!email) {
+      toast({ variant: "destructive", title: "Enter your email address" });
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Request failed", description: error.message });
+    } else {
+      setForgotOpen(false);
+      setForgotEmail("");
+      toast({
+        title: "Check your inbox",
+        description: "If an account exists for this email, you will receive a reset link.",
+      });
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -205,14 +254,21 @@ const Auth = () => {
             />
           </div>
           <CardTitle className="font-display text-2xl font-bold text-foreground">
-            Agent Portal
+            REMAX Excellence Canada
           </CardTitle>
           <CardDescription className="text-muted-foreground mt-2">
-            Access your resources, training materials, and marketing assets
+            Agent Portal — sign in to access training, listings, and support
           </CardDescription>
         </CardHeader>
         
         <CardContent className="pt-4">
+          {PORTAL_SHOWCASE && (
+            <div className="mb-4 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Demo preview:</strong> Use your Supabase agent credentials. The dashboard
+              loads sample listings, courses, and support threads when showcase mode is on (
+              <code className="rounded bg-background px-1">VITE_PORTAL_SHOWCASE</code>).
+            </div>
+          )}
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Sign In</TabsTrigger>
@@ -221,36 +277,94 @@ const Auth = () => {
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-reco" className="text-foreground font-medium">
-                    RECO Number
-                  </Label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="login-reco"
-                      type="text"
-                      placeholder="Enter your RECO number"
-                      value={loginRecoNumber}
-                      onChange={(e) => setLoginRecoNumber(e.target.value)}
-                      className="pl-10"
-                      disabled={loading}
-                    />
-                  </div>
-                  {loginErrors.recoNumber && (
-                    <p className="text-sm text-destructive">{loginErrors.recoNumber}</p>
-                  )}
+                <div className="flex rounded-lg border border-border p-1 bg-muted/40">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("email")}
+                    className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+                      loginMode === "email" ? "bg-background shadow-sm" : "text-muted-foreground"
+                    }`}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("reco")}
+                    className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+                      loginMode === "reco" ? "bg-background shadow-sm" : "text-muted-foreground"
+                    }`}
+                  >
+                    RECO number
+                  </button>
                 </div>
-                
+
+                {loginMode === "email" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email" className="text-foreground font-medium">
+                      Email
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="pl-10"
+                        disabled={loading}
+                      />
+                    </div>
+                    {loginErrors.email && <p className="text-sm text-destructive">{loginErrors.email}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-reco" className="text-foreground font-medium">
+                      RECO number
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-reco"
+                        type="text"
+                        placeholder="Enter your RECO number"
+                        value={loginRecoNumber}
+                        onChange={(e) => setLoginRecoNumber(e.target.value)}
+                        className="pl-10"
+                        disabled={loading}
+                      />
+                    </div>
+                    {loginErrors.recoNumber && (
+                      <p className="text-sm text-destructive">{loginErrors.recoNumber}</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label htmlFor="login-password" className="text-foreground font-medium">
-                    Password
-                  </Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="login-password" className="text-foreground font-medium">
+                      Password
+                    </Label>
+                    {loginMode === "email" && (
+                      <button
+                        type="button"
+                        className="text-xs text-accent hover:underline"
+                        onClick={() => {
+                          setForgotEmail(loginEmail);
+                          setForgotOpen(true);
+                        }}
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-password"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
                       placeholder="Enter your password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
@@ -269,11 +383,31 @@ const Auth = () => {
                     <p className="text-sm text-destructive">{loginErrors.password}</p>
                   )}
                 </div>
-                
+
                 <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
+                  {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
+
+              {forgotOpen && (
+                <div className="mt-4 rounded-lg border border-border p-4 space-y-3 bg-card">
+                  <p className="text-sm font-medium">Reset password</p>
+                  <Input
+                    type="email"
+                    placeholder="Your account email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setForgotOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="button" className="flex-1" onClick={handleForgotPassword} disabled={loading}>
+                      Send link
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="signup">

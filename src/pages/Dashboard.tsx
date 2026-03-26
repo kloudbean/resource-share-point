@@ -1,37 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HeroBanner from "@/components/dashboard/HeroBanner";
-import QuickStats from "@/components/dashboard/QuickStats";
-import AnnouncementsFeed from "@/components/dashboard/AnnouncementsFeed";
-import CalendarEvents from "@/components/dashboard/CalendarEvents";
+import DashboardCalendar from "@/components/dashboard/DashboardCalendar";
+import TrainingProgressSummary from "@/components/dashboard/TrainingProgressSummary";
 import TrainingCourses from "@/components/dashboard/TrainingCourses";
 import PreConSection from "@/components/dashboard/PreConSection";
+import VendorDirectory from "@/components/dashboard/VendorDirectory";
 import SupportChat from "@/components/dashboard/SupportChat";
 import RoomBooking from "@/components/dashboard/RoomBooking";
-import ResourceGrid from "@/components/dashboard/ResourceGrid";
-import remaxLogo from "@/assets/remax-excellence-logo.png";
-
-interface ResourceLink {
-  id: string;
-  resource_key: string;
-  title: string;
-  description: string | null;
-  category: string;
-  drive_url: string | null;
-  is_active: boolean;
-}
+import PortalFooter from "@/components/dashboard/PortalFooter";
+import { useAuth } from "@/hooks/useAuth";
+import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, agent, loading, isAdmin, isActive, signOut } = useAuth();
-  const [resources, setResources] = useState<ResourceLink[]>([]);
-  const [loadingResources, setLoadingResources] = useState(true);
 
   useEffect(() => {
     if (!loading) {
@@ -40,34 +27,29 @@ const Dashboard = () => {
     }
   }, [user, loading, isActive, agent, navigate]);
 
-  useEffect(() => { fetchResources(); }, []);
-
-  const fetchResources = async () => {
-    try {
-      const { data } = await supabase
-        .from("resource_links")
-        .select("*")
-        .eq("is_active", true)
-        .order("category", { ascending: true });
-      setResources(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoadingResources(false); }
-  };
-
   const getInitials = (name: string | null) => {
     if (!name) return "AG";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
   if (!user) return null;
 
   const agentName = agent?.full_name || `Agent ${agent?.reco_number || ""}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div id="top" className="min-h-screen bg-background flex flex-col">
       <DashboardHeader
         agentName={agentName}
         fullName={agent?.full_name || null}
@@ -75,96 +57,96 @@ const Dashboard = () => {
         avatarUrl={agent?.avatar_url || null}
         initials={getInitials(agent?.full_name)}
         isAdmin={isAdmin}
-        onLogout={async () => { await signOut(); navigate("/auth"); }}
+        onLogout={async () => {
+          await signOut();
+          navigate("/auth");
+        }}
       />
 
-      <main className="container mx-auto px-4 py-6 space-y-10">
+      <main className="flex-1 container mx-auto px-4 py-6 space-y-16">
         {!isActive && (
-          <Card className="border-amber-500 bg-amber-50">
+          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/30">
             <CardContent className="pt-6">
-              <p className="text-amber-800 text-center font-medium">
-                ⚠️ Your account is pending activation. Some features may be restricted.
+              <p className="text-amber-800 dark:text-amber-200 text-center font-medium">
+                Your account is pending activation. Some features may be restricted.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Hero Banner */}
         <HeroBanner
           agentName={agentName}
           avatarUrl={agent?.avatar_url || null}
           initials={getInitials(agent?.full_name)}
           recoNumber={agent?.reco_number || null}
+          joinedAt={agent?.created_at || null}
         />
 
-        {/* Section 1: Calendar + Training Courses (side by side on desktop) */}
-        <section>
-          <CalendarEvents agentId={agent?.id} />
-        </section>
-
-        <Separator />
-
-        {/* Section 2: Training Courses */}
-        <section>
-          <TrainingCourses agentId={agent?.id} />
-        </section>
-
-        <Separator />
-
-        {/* Section 3: Quick Stats + Announcements */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <QuickStats agentId={agent?.id} />
+        {PORTAL_SHOWCASE && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-100">
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+              Client preview
+            </span>
+            <span className="text-muted-foreground">
+              Rich demo content and Unsplash imagery are enabled for feedback. Set{" "}
+              <code className="rounded bg-muted px-1 text-xs">VITE_PORTAL_SHOWCASE=false</code> for database-only mode.
+            </span>
           </div>
-          <div>
-            <AnnouncementsFeed />
+        )}
+
+        <section
+          id="dashboard"
+          className="scroll-mt-28 space-y-6 rounded-3xl border border-border/50 bg-card/40 p-5 shadow-sm backdrop-blur-sm md:p-8"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">Dashboard</h2>
+            <p className="text-sm text-muted-foreground">Calendar and training at a glance</p>
+          </div>
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <DashboardCalendar agentId={agent?.id} isAdmin={isAdmin} />
+            <TrainingProgressSummary agentId={agent?.id} />
           </div>
         </section>
 
-        <Separator />
+        <Separator className="opacity-60" />
 
-        {/* Section 4: Pre-Construction */}
-        <section>
-          <PreConSection />
-        </section>
-
-        <Separator />
-
-        {/* Section 5: Marketing & Tech Support */}
-        <section>
-          <SupportChat agentId={agent?.id} userId={user?.id} />
-        </section>
-
-        <Separator />
-
-        {/* Section 6: Office & Meeting Rooms */}
-        <section>
-          <RoomBooking agentId={agent?.id} />
-        </section>
-
-        <Separator />
-
-        {/* Section 7: Resources */}
-        <section>
-          <div className="mb-4">
-            <h2 className="font-display text-2xl font-bold text-foreground">Your Resources</h2>
-            <p className="text-muted-foreground text-sm">Access training materials, marketing assets, and more.</p>
-          </div>
-          <ResourceGrid
-            resources={resources}
-            loading={loadingResources}
-            isActive={isActive}
+        <section
+          id="courses"
+          className="scroll-mt-28 rounded-3xl border border-border/40 bg-muted/15 p-5 md:p-8"
+        >
+          <TrainingCourses
             agentId={agent?.id}
+            agentName={agent?.full_name}
+            recoNumber={agent?.reco_number}
           />
+        </section>
+
+        <Separator className="opacity-60" />
+
+        <div className="rounded-3xl border border-border/40 bg-card/30 p-5 md:p-8">
+          <PreConSection agentId={agent?.id} />
+        </div>
+
+        <Separator className="opacity-60" />
+
+        <section id="vendors" className="scroll-mt-28 rounded-3xl border border-border/50 bg-card/30 p-5 md:p-8">
+          <VendorDirectory />
+        </section>
+
+        <Separator className="opacity-60" />
+
+        <section id="support" className="scroll-mt-28 rounded-3xl border border-border/50 bg-muted/10 p-5 md:p-8">
+          <SupportChat agentId={agent?.id} userId={user?.id} isAdmin={isAdmin} />
+        </section>
+
+        <Separator className="opacity-60" />
+
+        <section id="offices" className="scroll-mt-28 rounded-3xl border border-border/40 bg-card/40 p-5 md:p-8">
+          <RoomBooking agentId={agent?.id} />
         </section>
       </main>
 
-      <footer className="border-t border-border bg-primary text-primary-foreground py-6">
-        <div className="container mx-auto px-4 text-center">
-          <img src={remaxLogo} alt="REMAX Excellence" className="h-8 mx-auto mb-3 brightness-0 invert opacity-80" />
-          <p className="text-sm text-primary-foreground/70">© 2024 REMAX Excellence. All rights reserved.</p>
-        </div>
-      </footer>
+      <PortalFooter />
     </div>
   );
 };

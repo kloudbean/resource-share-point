@@ -713,6 +713,54 @@ export type Database = {
           },
         ]
       }
+      vendors: {
+        Row: {
+          id: string
+          category: string
+          business_name: string
+          contact_name: string | null
+          phone: string | null
+          email: string | null
+          website: string | null
+          notes: string | null
+          is_active: boolean
+          sort_order: number
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          business_name: string
+          contact_name?: string | null
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          business_name?: string
+          contact_name?: string | null
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

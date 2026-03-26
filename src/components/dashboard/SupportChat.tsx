@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquare, Send, Plus, Headphones, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
+import SupportChatShowcase from "@/components/dashboard/SupportChatShowcase";
 
 interface Ticket {
   id: string;
@@ -32,9 +34,14 @@ interface Message {
 interface SupportChatProps {
   agentId: string | undefined;
   userId: string | undefined;
+  isAdmin?: boolean;
 }
 
-const SupportChat = ({ agentId, userId }: SupportChatProps) => {
+const SupportChat = ({ agentId, userId, isAdmin }: SupportChatProps) => {
+  if (PORTAL_SHOWCASE) {
+    return <SupportChatShowcase />;
+  }
+
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,6 +49,11 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
   const [newSubject, setNewSubject] = useState("");
   const [newCategory, setNewCategory] = useState("general");
   const [showNewTicket, setShowNewTicket] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
+  const [bookDate, setBookDate] = useState("");
+  const [bookNote, setBookNote] = useState("");
+  const [newPriority, setNewPriority] = useState("normal");
+  const [newDescription, setNewDescription] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,16 +99,43 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
     if (!agentId || !newSubject.trim()) return;
     const { data } = await supabase
       .from("support_tickets")
-      .insert({ agent_id: agentId, subject: newSubject, category: newCategory })
+      .insert({
+        agent_id: agentId,
+        subject: newSubject,
+        category: newCategory,
+        priority: newPriority,
+      })
       .select()
       .single();
     if (data) {
-      setTickets((prev) => [data as Ticket, ...prev]);
-      setSelectedTicket(data as Ticket);
+      const t = data as Ticket;
+      if (newDescription.trim() && userId) {
+        await supabase.from("support_messages").insert({
+          ticket_id: t.id,
+          sender_id: userId,
+          message: newDescription.trim(),
+          is_admin: false,
+        });
+      }
+      setTickets((prev) => [t, ...prev]);
+      setSelectedTicket(t);
       setShowNewTicket(false);
       setNewSubject("");
+      setNewDescription("");
       toast({ title: "Ticket created!" });
     }
+  };
+
+  const confirmBooking = () => {
+    toast({
+      title: "Meeting requested",
+      description: bookDate
+        ? `We'll confirm ${bookNote || "your slot"} — calendar email is simulated.`
+        : "Pick a date first.",
+    });
+    setBookOpen(false);
+    setBookDate("");
+    setBookNote("");
   };
 
   const sendMessage = async () => {
@@ -127,9 +166,14 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
             <p className="text-sm text-muted-foreground">Get help from our support team</p>
           </div>
         </div>
-        <Button onClick={() => setShowNewTicket(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> New Ticket
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setBookOpen(true)} className="gap-2">
+            <Calendar className="h-4 w-4" /> Book a meeting
+          </Button>
+          <Button onClick={() => setShowNewTicket(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> New Ticket
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -147,14 +191,17 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
                   selectedTicket?.id === ticket.id ? "border-accent bg-accent/5" : "border-border hover:bg-muted/50"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1 gap-1">
+                  <span className="text-[10px] font-mono text-muted-foreground">#{ticket.id.slice(0, 8)}</span>
                   <Badge variant="outline" className={statusColors[ticket.status] || ""}>
                     {ticket.status}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">{format(new Date(ticket.created_at), "MMM d")}</span>
                 </div>
                 <p className="text-sm font-medium truncate">{ticket.subject}</p>
                 <p className="text-xs text-muted-foreground">{ticket.category}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Updated {format(new Date(ticket.created_at), "MMM d, h:mm a")}
+                </p>
               </div>
             ))}
             {tickets.length === 0 && (
@@ -218,12 +265,12 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
       <Dialog open={showNewTicket} onOpenChange={setShowNewTicket}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Support Ticket</DialogTitle>
+            <DialogTitle>Create support ticket</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input placeholder="Subject" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} />
             <Select value={newCategory} onValueChange={setNewCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="general">General</SelectItem>
                 <SelectItem value="marketing">Marketing</SelectItem>
@@ -231,10 +278,46 @@ const SupportChat = ({ agentId, userId }: SupportChatProps) => {
                 <SelectItem value="billing">Billing</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={createTicket} className="w-full">Create Ticket</Button>
+            <Select value={newPriority} onValueChange={setNewPriority}>
+              <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Describe the issue (attachments can be wired to storage)"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              rows={4}
+            />
+            <Button onClick={createTicket} className="w-full">Submit ticket</Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={bookOpen} onOpenChange={setBookOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book a meeting</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Calendly-style scheduling — connect your calendar provider for production.
+            </p>
+            <Input placeholder="Preferred date & time" value={bookDate} onChange={(e) => setBookDate(e.target.value)} />
+            <Textarea placeholder="What would you like to discuss?" value={bookNote} onChange={(e) => setBookNote(e.target.value)} rows={3} />
+          </div>
+          <Button onClick={confirmBooking} className="w-full">Confirm</Button>
+        </DialogContent>
+      </Dialog>
+
+      {isAdmin && (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          Admin: view all tickets and assignments in the admin panel.
+        </p>
+      )}
     </div>
   );
 };

@@ -1,86 +1,61 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
+import TrainingCoursesShowcase from "@/components/dashboard/TrainingCoursesShowcase";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { GraduationCap, PlayCircle, FileQuestion, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
-
-interface Course {
-  id: string;
-  title: string;
-  description: string | null;
-  thumbnail_url: string | null;
-  category: string;
-  is_mandatory: boolean;
-}
-
-interface CourseModule {
-  id: string;
-  course_id: string;
-  title: string;
-  module_type: string;
-  video_url: string | null;
-  duration_minutes: number | null;
-  sort_order: number;
-}
-
-interface ModuleProgress {
-  module_id: string;
-  completed: boolean;
-  watched_seconds: number;
-  score: number | null;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  GraduationCap,
+  PlayCircle,
+  FileQuestion,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Award,
+} from "lucide-react";
+import { useTrainingCoursesData, type Course } from "@/hooks/useTrainingCoursesData";
+import { toast } from "@/hooks/use-toast";
+import remaxLogo from "@/assets/remax-excellence-logo.png";
 
 interface TrainingCoursesProps {
   agentId: string | undefined;
+  agentName?: string | null;
+  recoNumber?: string | null;
 }
 
-const TrainingCourses = ({ agentId }: TrainingCoursesProps) => {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [modules, setModules] = useState<CourseModule[]>([]);
-  const [progress, setProgress] = useState<ModuleProgress[]>([]);
+export default function TrainingCourses({ agentId, agentName, recoNumber }: TrainingCoursesProps) {
+  if (PORTAL_SHOWCASE) {
+    return <TrainingCoursesShowcase agentName={agentName} recoNumber={recoNumber} />;
+  }
+
+  const {
+    courses,
+    modules,
+    progress,
+    loading,
+    refetch,
+    getCourseProgress,
+    getCourseModules,
+    isModuleCompleted,
+    setProgress,
+  } = useTrainingCoursesData(agentId);
+
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [reminderFreq, setReminderFreq] = useState("weekly");
+  const [certOpen, setCertOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCourses();
-  }, [agentId]);
-
-  const fetchCourses = async () => {
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    setCourses((courseData as Course[]) || []);
-
-    const { data: moduleData } = await supabase
-      .from("course_modules")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    setModules((moduleData as CourseModule[]) || []);
-
-    if (agentId) {
-      const { data: progressData } = await supabase
-        .from("course_progress")
-        .select("*")
-        .eq("agent_id", agentId);
-      setProgress((progressData as ModuleProgress[]) || []);
-    }
-  };
-
-  const getCourseProgress = (courseId: string) => {
-    const courseModules = modules.filter((m) => m.course_id === courseId);
-    if (courseModules.length === 0) return 0;
-    const completed = courseModules.filter((m) => progress.some((p) => p.module_id === m.id && p.completed)).length;
-    return Math.round((completed / courseModules.length) * 100);
-  };
-
-  const getCourseModules = (courseId: string) => modules.filter((m) => m.course_id === courseId);
-
-  const isModuleCompleted = (moduleId: string) => progress.some((p) => p.module_id === moduleId && p.completed);
+  const newCourses = courses.filter((c) => getCourseProgress(c.id) < 100);
+  const completedCourses = courses.filter((c) => getCourseProgress(c.id) === 100);
 
   const markComplete = async (moduleId: string) => {
     if (!agentId) return;
@@ -92,125 +67,219 @@ const TrainingCourses = ({ agentId }: TrainingCoursesProps) => {
         .eq("agent_id", agentId)
         .eq("module_id", moduleId);
     } else {
-      await supabase
-        .from("course_progress")
-        .insert({ agent_id: agentId, module_id: moduleId, completed: true, completed_at: new Date().toISOString() });
+      await supabase.from("course_progress").insert({
+        agent_id: agentId,
+        module_id: moduleId,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      });
     }
     setProgress((prev) => {
       const idx = prev.findIndex((p) => p.module_id === moduleId);
       if (idx >= 0) return prev.map((p, i) => (i === idx ? { ...p, completed: true } : p));
       return [...prev, { module_id: moduleId, completed: true, watched_seconds: 0, score: null }];
     });
+    refetch();
+  };
+
+  const pct = selectedCourse ? getCourseProgress(selectedCourse.id) : 0;
+  const doneCert = pct === 100;
+
+  const CourseCard = ({ course }: { course: Course }) => {
+    const p = getCourseProgress(course.id);
+    const modCount = getCourseModules(course.id).length;
+    const completedCount = getCourseModules(course.id).filter((m) => isModuleCompleted(m.id)).length;
+    const priceTag = course.category?.toLowerCase().includes("paid") ? "Paid" : "Free";
+
+    return (
+      <Card
+        className="min-w-[260px] max-w-[280px] border-border hover:shadow-lg transition-all cursor-pointer group shrink-0 snap-start"
+        onClick={() => setSelectedCourse(course)}
+      >
+        <div className="h-28 bg-gradient-to-br from-primary/80 to-primary rounded-t-lg flex items-center justify-center relative overflow-hidden">
+          {course.thumbnail_url ? (
+            <img src={course.thumbnail_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <GraduationCap className="h-10 w-10 text-primary-foreground/60" />
+          )}
+          {course.is_mandatory && (
+            <Badge className="absolute top-2 right-2 bg-destructive text-[10px]">
+              <AlertTriangle className="h-3 w-3 mr-0.5" /> Required
+            </Badge>
+          )}
+          <Badge className="absolute bottom-2 left-2 bg-background/90 text-foreground text-[10px]">{priceTag}</Badge>
+        </div>
+        <CardContent className="pt-3 pb-4">
+          <Badge variant="outline" className="text-[10px] mb-1">
+            {course.category}
+          </Badge>
+          <h3 className="font-semibold text-sm text-foreground line-clamp-2 group-hover:text-accent">{course.title}</h3>
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1">{course.description}</p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>
+                {completedCount}/{modCount} modules
+              </span>
+              <span className="font-semibold text-foreground">{p}%</span>
+            </div>
+            <Progress value={p} className="h-1.5" />
+          </div>
+          <Button size="sm" className="w-full mt-3" variant={p > 0 ? "default" : "outline"}>
+            {p > 0 ? "Continue" : "Enroll now"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-4">
-        <GraduationCap className="h-6 w-6 text-accent" />
+    <div className="space-y-10">
+      <div className="flex items-center gap-3">
+        <GraduationCap className="h-7 w-7 text-accent" />
         <div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Training Courses</h2>
-          <p className="text-sm text-muted-foreground">Complete all mandatory courses to stay compliant</p>
+          <h2 className="font-display text-2xl font-bold text-foreground">Training &amp; courses</h2>
+          <p className="text-sm text-muted-foreground">Video modules, quizzes, and certificates</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {courses.map((course) => {
-          const pct = getCourseProgress(course.id);
-          const modCount = getCourseModules(course.id).length;
-          const completedCount = getCourseModules(course.id).filter((m) => isModuleCompleted(m.id)).length;
-
-          return (
-            <Card
-              key={course.id}
-              className="border-border hover:shadow-lg transition-all cursor-pointer group"
-              onClick={() => setSelectedCourse(course)}
-            >
-              <div className="h-32 bg-gradient-to-br from-primary/80 to-primary rounded-t-lg flex items-center justify-center relative overflow-hidden">
-                {course.thumbnail_url ? (
-                  <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
-                ) : (
-                  <GraduationCap className="h-12 w-12 text-primary-foreground/60" />
-                )}
-                {course.is_mandatory && (
-                  <Badge className="absolute top-2 right-2 bg-destructive text-destructive-foreground text-xs">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> Required
-                  </Badge>
-                )}
-                {pct === 100 && (
-                  <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="h-12 w-12 text-green-500" />
-                  </div>
-                )}
-              </div>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-xs">{course.category}</Badge>
-                </div>
-                <h3 className="font-semibold text-foreground mb-1 group-hover:text-accent transition-colors">{course.title}</h3>
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{completedCount}/{modCount} modules</span>
-                    <span className="font-semibold text-foreground">{pct}%</span>
-                  </div>
-                  <Progress value={pct} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-
-        {courses.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
-            <GraduationCap className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p>No courses available yet</p>
+      {/* New courses */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center rounded-md bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground">
+            New
+          </span>
+          <h3 className="font-display font-semibold text-lg">Active courses</h3>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex gap-4 pb-1">
+            {loading && <p className="text-sm text-muted-foreground py-8">Loading…</p>}
+            {!loading &&
+              newCourses.map((c) => <CourseCard key={c.id} course={c} />)}
+            {!loading && newCourses.length === 0 && (
+              <p className="text-sm text-muted-foreground py-6">No active courses.</p>
+            )}
           </div>
-        )}
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
 
-      {/* Course Detail Dialog */}
-      <Dialog open={!!selectedCourse} onOpenChange={() => setSelectedCourse(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Completed */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center rounded-md bg-green-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+            Completed
+          </span>
+          <h3 className="font-display font-semibold text-lg">Completed courses</h3>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex gap-4 pb-1">
+            {!loading &&
+              completedCourses.map((c) => <CourseCard key={c.id} course={c} />)}
+            {!loading && completedCourses.length === 0 && (
+              <p className="text-sm text-muted-foreground py-6">Complete a course to see it here.</p>
+            )}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </div>
+
+      {/* Course modal */}
+      <Dialog open={!!selectedCourse} onOpenChange={(o) => !o && setSelectedCourse(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedCourse && (
             <>
               <DialogHeader>
-                <DialogTitle className="font-display text-xl">{selectedCourse.title}</DialogTitle>
+                <DialogTitle className="font-display text-xl pr-6">{selectedCourse.title}</DialogTitle>
                 <p className="text-sm text-muted-foreground">{selectedCourse.description}</p>
               </DialogHeader>
-              <div className="space-y-3 mt-4">
+
+              <div className="grid md:grid-cols-3 gap-4 mt-2">
+                <div className="md:col-span-2 space-y-3">
+                  <div className="aspect-video rounded-lg bg-muted overflow-hidden border">
+                    {getCourseModules(selectedCourse.id).find((m) => m.video_url)?.video_url ? (
+                      <iframe
+                        title="Course video"
+                        src={getCourseModules(selectedCourse.id).find((m) => m.video_url)?.video_url || ""}
+                        className="w-full h-full min-h-[200px]"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div className="h-full min-h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+                        <PlayCircle className="h-10 w-10 mr-2 opacity-40" />
+                        Video URL can be set in admin — mark modules complete below.
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-sm text-muted-foreground">Overall progress</span>
+                    <Badge variant={doneCert ? "default" : "secondary"}>
+                      {doneCert ? "Completed" : "In progress"}
+                    </Badge>
+                  </div>
+                  <Progress value={pct} className="h-2" />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Reminder frequency</p>
+                  <Select value={reminderFreq} onValueChange={setReminderFreq}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="off">Off</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Email nudges are simulated here — connect automation for production.
+                  </p>
+                  {doneCert && (
+                    <Button className="w-full gap-2" onClick={() => setCertOpen(true)}>
+                      <Award className="h-4 w-4" /> Certificate of completion
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Syllabus</p>
                 {getCourseModules(selectedCourse.id).map((mod, idx) => {
                   const done = isModuleCompleted(mod.id);
                   return (
                     <div
                       key={mod.id}
-                      className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
-                        done ? "bg-green-50 border-green-200" : "border-border hover:bg-muted/50"
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        done ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" : "border-border"
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        done ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
-                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                          done ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         {done ? <CheckCircle2 className="h-4 w-4" /> : idx + 1}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {mod.module_type === "video" ? (
-                            <PlayCircle className="h-4 w-4 text-accent" />
+                            <PlayCircle className="h-4 w-4 text-accent shrink-0" />
                           ) : (
-                            <FileQuestion className="h-4 w-4 text-blue-500" />
+                            <FileQuestion className="h-4 w-4 text-blue-500 shrink-0" />
                           )}
                           <span className="font-medium text-sm">{mod.title}</span>
                         </div>
-                        {mod.duration_minutes && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        {mod.duration_minutes != null && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Clock className="h-3 w-3" /> {mod.duration_minutes} min
                           </span>
                         )}
+                        <Progress value={done ? 100 : 0} className="h-1 mt-1" />
                       </div>
                       {!done && (
                         <Button size="sm" variant="outline" onClick={() => markComplete(mod.id)}>
-                          Mark Complete
+                          Mark complete
                         </Button>
                       )}
                     </div>
@@ -221,8 +290,35 @@ const TrainingCourses = ({ agentId }: TrainingCoursesProps) => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={certOpen} onOpenChange={setCertOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Certificate of completion</DialogTitle>
+          </DialogHeader>
+          <div className="border-2 border-primary/30 rounded-lg p-6 text-center space-y-4 bg-card">
+            <img src={remaxLogo} alt="" className="h-10 mx-auto object-contain" />
+            <p className="font-display text-lg font-semibold">Certificate of completion</p>
+            <p className="text-sm text-muted-foreground">This certifies that</p>
+            <p className="font-display text-xl font-bold">{agentName || "Agent"}</p>
+            <p className="text-xs text-muted-foreground">RECO# {recoNumber || "—"}</p>
+            <p className="text-sm">
+              has completed <span className="font-semibold">{selectedCourse?.title}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString("en-CA", { dateStyle: "long" })}</p>
+            <div className="pt-4 border-t border-dashed text-xs text-muted-foreground">Authorized signature ____________________</div>
+          </div>
+          <Button
+            className="w-full"
+            onClick={() => {
+              window.print();
+              toast({ title: "Print dialog opened", description: "Save as PDF from your browser." });
+            }}
+          >
+            Print / save as PDF
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default TrainingCourses;
+}

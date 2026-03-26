@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Real Estate Professional Theme */
 
@@ -95,13 +95,17 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -115,6 +119,36 @@
   }
   
   .font-body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  .portal-section-surface {
+    @apply rounded-3xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-sm;
+  }
+
+  .portal-section-muted {
+    @apply rounded-3xl border border-border/40 bg-muted/25;
+  }
+
+  /* FullCalendar — brand tokens */
+  .fc {
+    --fc-border-color: hsl(var(--border));
+    --fc-button-bg-color: hsl(var(--primary));
+    --fc-button-border-color: hsl(var(--primary));
+    --fc-button-text-color: hsl(var(--primary-foreground));
+    --fc-button-hover-bg-color: hsl(var(--primary) / 0.9);
+    --fc-today-bg-color: hsl(var(--accent) / 0.12);
+    --fc-event-bg-color: hsl(var(--primary));
+    --fc-event-border-color: hsl(var(--primary));
+    --fc-page-bg-color: hsl(var(--card));
+  }
+
+  .fc .fc-toolbar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+  }
+
+  .portal-nav-link {
+    @apply text-sm font-medium text-primary-foreground/90 hover:text-primary-foreground transition-colors;
   }
 }
