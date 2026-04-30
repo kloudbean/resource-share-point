@@ -148,6 +148,38 @@
     font-size: 1.25rem;
   }
 
+  /* Month grid: allow wrapped titles so event text isn’t clipped */
+  .fc .fc-daygrid-day-frame {
+    min-height: 6.5rem;
+  }
+  @media (min-width: 768px) {
+    .fc .fc-daygrid-day-frame {
+      min-height: 7.25rem;
+    }
+  }
+  .fc .fc-daygrid-event {
+    margin-top: 2px;
+    font-size: 0.7rem;
+    line-height: 1.25;
+  }
+  .fc .fc-daygrid-event .fc-event-main {
+    white-space: normal;
+  }
+  .fc .fc-daygrid-block-event .fc-event-title,
+  .fc .fc-daygrid-event .fc-event-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-weight: 600;
+  }
+  .fc-h-event .fc-event-main-frame {
+    white-space: normal;
+  }
+  .fc .fc-daygrid-more-link {
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+
   .portal-nav-link {
     @apply text-sm font-medium text-primary-foreground/90 hover:text-primary-foreground transition-colors;
   }

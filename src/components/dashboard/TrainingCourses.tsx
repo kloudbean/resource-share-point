@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
 import TrainingCoursesShowcase from "@/components/dashboard/TrainingCoursesShowcase";
@@ -26,6 +26,7 @@ import {
 import { useTrainingCoursesData, type Course } from "@/hooks/useTrainingCoursesData";
 import { toast } from "@/hooks/use-toast";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
+import CertificateShareActions from "@/components/dashboard/CertificateShareActions";
 
 interface TrainingCoursesProps {
   agentId: string | undefined;
@@ -53,6 +54,15 @@ export default function TrainingCourses({ agentId, agentName, recoNumber }: Trai
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [reminderFreq, setReminderFreq] = useState("weekly");
   const [certOpen, setCertOpen] = useState(false);
+  const [assignedCourseIds, setAssignedCourseIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!agentId) return;
+    (async () => {
+      const { data } = await supabase.from("course_assignments").select("course_id").eq("agent_id", agentId);
+      setAssignedCourseIds(new Set((data || []).map((r: { course_id: string }) => r.course_id)));
+    })();
+  }, [agentId]);
 
   const newCourses = courses.filter((c) => getCourseProgress(c.id) < 100);
   const completedCourses = courses.filter((c) => getCourseProgress(c.id) === 100);
@@ -102,10 +112,17 @@ export default function TrainingCourses({ agentId, agentName, recoNumber }: Trai
           ) : (
             <GraduationCap className="h-10 w-10 text-primary-foreground/60" />
           )}
-          {course.is_mandatory && (
-            <Badge className="absolute top-2 right-2 bg-destructive text-[10px]">
-              <AlertTriangle className="h-3 w-3 mr-0.5" /> Required
-            </Badge>
+          {(assignedCourseIds.has(course.id) || course.is_mandatory) && (
+            <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+              {assignedCourseIds.has(course.id) && (
+                <Badge className="bg-amber-500 text-[10px] text-amber-950 hover:bg-amber-500">Assigned</Badge>
+              )}
+              {course.is_mandatory && (
+                <Badge className="bg-destructive text-[10px]">
+                  <AlertTriangle className="h-3 w-3 mr-0.5" /> Required
+                </Badge>
+              )}
+            </div>
           )}
           <Badge className="absolute bottom-2 left-2 bg-background/90 text-foreground text-[10px]">{priceTag}</Badge>
         </div>
@@ -308,15 +325,24 @@ export default function TrainingCourses({ agentId, agentName, recoNumber }: Trai
             <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString("en-CA", { dateStyle: "long" })}</p>
             <div className="pt-4 border-t border-dashed text-xs text-muted-foreground">Authorized signature ____________________</div>
           </div>
-          <Button
-            className="w-full"
-            onClick={() => {
-              window.print();
-              toast({ title: "Print dialog opened", description: "Save as PDF from your browser." });
-            }}
-          >
-            Print / save as PDF
-          </Button>
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Share your achievement</p>
+            <CertificateShareActions
+              agentName={agentName || "Agent"}
+              reco={recoNumber || "—"}
+              courseTitle={selectedCourse?.title || "Course"}
+            />
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => {
+                window.print();
+                toast({ title: "Print dialog opened", description: "Save as PDF from your browser." });
+              }}
+            >
+              Print / save as PDF
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

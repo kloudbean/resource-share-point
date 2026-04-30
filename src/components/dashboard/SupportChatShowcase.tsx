@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Headphones, Plus, Calendar, Send } from "lucide-react";
 import { demoSupportTickets, demoChatMessages } from "@/data/demoPortalContent";
+import SupportResourceCards from "@/components/dashboard/SupportResourceCards";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -33,6 +34,8 @@ export default function SupportChatShowcase() {
 
   return (
     <div>
+      <SupportResourceCards />
+
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Headphones className="h-7 w-7 text-primary" />
@@ -51,7 +54,7 @@ export default function SupportChatShowcase() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
+      <div id="support-tickets" className="scroll-mt-28 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
         <Card className="overflow-hidden border-border/80 shadow-sm">
           <CardHeader className="border-b border-border py-3">
             <div className="flex items-center justify-between">

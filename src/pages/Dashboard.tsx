@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -13,12 +15,19 @@ import VendorDirectory from "@/components/dashboard/VendorDirectory";
 import SupportChat from "@/components/dashboard/SupportChat";
 import RoomBooking from "@/components/dashboard/RoomBooking";
 import PortalFooter from "@/components/dashboard/PortalFooter";
+import AdminPortalFeaturesOverview from "@/components/dashboard/AdminPortalFeaturesOverview";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgentPortalSettings } from "@/hooks/useAgentPortalSettings";
+import { useAgentReminders } from "@/hooks/useAgentReminders";
+import { toast } from "@/hooks/use-toast";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, agent, loading, isAdmin, isActive, signOut } = useAuth();
+  const { hideCommissionRates, setHideCommission } = useAgentPortalSettings(agent?.id);
+  const { reminders, dismiss } = useAgentReminders(agent?.id);
+  const [remindersOpen, setRemindersOpen] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -57,6 +66,22 @@ const Dashboard = () => {
         avatarUrl={agent?.avatar_url || null}
         initials={getInitials(agent?.full_name)}
         isAdmin={isAdmin}
+        hideCommissionRates={hideCommissionRates}
+        onHideCommissionChange={async (hide) => {
+          try {
+            await setHideCommission(hide);
+            toast({
+              title: hide ? "Co-op % hidden" : "Co-op % visible",
+              description: hide
+                ? "Pre-con commission badges are hidden on your portal."
+                : "Agents can see commission rates on listings again.",
+            });
+          } catch {
+            toast({ variant: "destructive", title: "Could not update setting" });
+          }
+        }}
+        reminderCount={reminders.length}
+        onOpenReminders={() => setRemindersOpen(true)}
         onLogout={async () => {
           await signOut();
           navigate("/auth");
@@ -81,6 +106,8 @@ const Dashboard = () => {
           recoNumber={agent?.reco_number || null}
           joinedAt={agent?.created_at || null}
         />
+
+        <AdminPortalFeaturesOverview isAdmin={isAdmin} />
 
         {PORTAL_SHOWCASE && (
           <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-100">
@@ -124,7 +151,7 @@ const Dashboard = () => {
         <Separator className="opacity-60" />
 
         <div className="rounded-3xl border border-border/40 bg-card/30 p-5 md:p-8">
-          <PreConSection agentId={agent?.id} />
+          <PreConSection agentId={agent?.id} hideCommissionRates={hideCommissionRates} />
         </div>
 
         <Separator className="opacity-60" />
@@ -147,6 +174,38 @@ const Dashboard = () => {
       </main>
 
       <PortalFooter />
+
+      <Sheet open={remindersOpen} onOpenChange={setRemindersOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="font-display">Your reminders</SheetTitle>
+          </SheetHeader>
+          <p className="text-sm text-muted-foreground mt-1">
+            Admins can schedule nudges for courses, pre-con follow-ups, and more.
+          </p>
+          <div className="mt-6 space-y-3">
+            {reminders.length === 0 && <p className="text-sm text-muted-foreground">No active reminders.</p>}
+            {reminders.map((r) => (
+              <div key={r.id} className="rounded-xl border border-border bg-card p-4">
+                <p className="font-semibold text-foreground">{r.title}</p>
+                {r.body && <p className="mt-1 text-sm text-muted-foreground">{r.body}</p>}
+                <p className="mt-2 text-[11px] text-muted-foreground capitalize">{r.entity_type.replace(/_/g, " ")}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={async () => {
+                    await dismiss(r.id);
+                    toast({ title: "Dismissed" });
+                  }}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

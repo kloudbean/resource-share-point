@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2, Copy, ExternalLink, Phone, Mail } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { buildContactShareUrl } from "@/lib/shareLandingPayload";
+import SocialShareIconRow from "@/components/share/SocialShareIconRow";
 
 export type VendorListItem = {
   id: string;
@@ -154,6 +156,21 @@ export function VendorDirectoryInner({
                           </a>
                         </div>
                       )}
+                    </div>
+                    <div className="mt-4 border-t border-border/60 pt-4">
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Share</p>
+                      <SocialShareIconRow
+                        compact
+                        preface={`Recommended partner — ${v.business_name} (${v.category})`}
+                        linkUrl={buildContactShareUrl({
+                          category: v.category,
+                          business_name: v.business_name,
+                          contact_name: v.contact_name,
+                          phone: v.phone,
+                          email: v.email,
+                          website: v.website,
+                        })}
+                      />
                     </div>
                   </CardContent>
                 </Card>

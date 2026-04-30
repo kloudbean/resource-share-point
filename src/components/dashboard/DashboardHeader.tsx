@@ -12,6 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   LogOut,
@@ -30,6 +31,7 @@ const nav = [
   { label: "Listings", href: "#listings" },
   { label: "Assets", href: "#assets" },
   { label: "Vendors", href: "#vendors" },
+  { label: "Buyer kit", href: "#buyer-kit" },
 ];
 
 interface DashboardHeaderProps {
@@ -41,6 +43,11 @@ interface DashboardHeaderProps {
   isAdmin: boolean;
   onLogout: () => void;
   notificationCount?: number;
+  /** When set with onHideCommissionChange, agents can hide co-op % on pre-con cards (e.g. in front of clients). */
+  hideCommissionRates?: boolean;
+  onHideCommissionChange?: (hide: boolean) => void;
+  reminderCount?: number;
+  onOpenReminders?: () => void;
 }
 
 const DashboardHeader = ({
@@ -52,6 +59,10 @@ const DashboardHeader = ({
   isAdmin,
   onLogout,
   notificationCount = 3,
+  hideCommissionRates = false,
+  onHideCommissionChange,
+  reminderCount = 0,
+  onOpenReminders,
 }: DashboardHeaderProps) => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -100,12 +111,17 @@ const DashboardHeader = ({
               variant="ghost"
               size="icon"
               className="relative text-primary-foreground hover:bg-primary-foreground/10"
-              aria-label="Notifications"
+              aria-label="Reminders"
+              onClick={() => (onOpenReminders ? onOpenReminders() : undefined)}
             >
               <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
+              {(onOpenReminders ? reminderCount : notificationCount) > 0 && (
                 <Badge className="absolute -top-0.5 -right-0.5 h-5 min-w-[1.25rem] px-1 flex items-center justify-center text-[10px] bg-destructive text-destructive-foreground border-0">
-                  {notificationCount > 9 ? "9+" : notificationCount}
+                  {(onOpenReminders ? reminderCount : notificationCount) > 9
+                    ? "9+"
+                    : onOpenReminders
+                      ? reminderCount
+                      : notificationCount}
                 </Badge>
               )}
             </Button>
@@ -150,6 +166,15 @@ const DashboardHeader = ({
                   <DropdownMenuItem onClick={() => navigate("/admin")}>
                     <Shield className="mr-2 h-4 w-4" /> Admin
                   </DropdownMenuItem>
+                )}
+                {onHideCommissionChange && (
+                  <DropdownMenuCheckboxItem
+                    checked={hideCommissionRates}
+                    onCheckedChange={(v) => onHideCommissionChange(!!v)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    Hide co-op % on listings
+                  </DropdownMenuCheckboxItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout} className="text-destructive lg:hidden">

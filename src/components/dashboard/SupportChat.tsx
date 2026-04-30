@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
 import SupportChatShowcase from "@/components/dashboard/SupportChatShowcase";
+import SupportResourceCards from "@/components/dashboard/SupportResourceCards";
 
 interface Ticket {
   id: string;
@@ -158,6 +159,8 @@ const SupportChat = ({ agentId, userId, isAdmin }: SupportChatProps) => {
 
   return (
     <div>
+      <SupportResourceCards />
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <Headphones className="h-6 w-6 text-accent" />
@@ -176,7 +179,7 @@ const SupportChat = ({ agentId, userId, isAdmin }: SupportChatProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div id="support-tickets" className="scroll-mt-28 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Ticket List */}
         <Card className="border-border lg:col-span-1">
           <CardHeader className="pb-2">

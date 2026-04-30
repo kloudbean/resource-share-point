@@ -66,6 +66,14 @@ const Index = () => {
               >
                 New Agent? Register
               </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => navigate("/preview")}
+                className="h-12 px-8 text-base font-semibold border border-border shadow-sm"
+              >
+                Stakeholder preview (no login)
+              </Button>
             </div>
           </div>
         </div>
@@ -133,7 +141,7 @@ const Index = () => {
             <span className="font-display font-semibold text-foreground">Agent Portal</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 Agent Portal. Secure access for authorized agents only.
+            © 2026 Agent Portal. Secure access for authorized agents only.
           </p>
         </div>
       </footer>

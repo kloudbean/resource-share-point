@@ -285,9 +285,15 @@ export default function DashboardCalendar({ agentId, isAdmin }: DashboardCalenda
               right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
             }}
             height="auto"
+            aspectRatio={1.05}
             events={fcEvents}
             eventClick={onEventClick}
-            dayMaxEvents={3}
+            dayMaxEvents={4}
+            moreLinkClick="popover"
+            eventDidMount={(arg) => {
+              const t = arg.event.title;
+              if (t) arg.el.setAttribute("title", t);
+            }}
             nowIndicator
           />
         </div>

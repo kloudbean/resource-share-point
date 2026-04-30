@@ -54,6 +54,10 @@ import {
   BarChart3,
   Link as LinkIcon,
   Store,
+  MapPin,
+  GraduationCap,
+  Bell,
+  Share2,
 } from "lucide-react";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 
@@ -365,6 +369,61 @@ const AdminPanel = () => {
                   <p className="text-sm text-muted-foreground">
                     Update Google Drive URLs for resources
                   </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/precon")}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-sky-500/15 flex items-center justify-center">
+                  <MapPin className="h-6 w-6 text-sky-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Pre-con cities &amp; projects</h3>
+                  <p className="text-sm text-muted-foreground">Cities, filters, commission %, listings</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/course-assignments")}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                  <GraduationCap className="h-6 w-6 text-violet-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Course assignments</h3>
+                  <p className="text-sm text-muted-foreground">Assign training to agents</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/reminders")}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                  <Bell className="h-6 w-6 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Agent reminders</h3>
+                  <p className="text-sm text-muted-foreground">Nudges for courses, pre-con, vendors</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/admin/social-share")}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                  <Share2 className="h-6 w-6 text-emerald-700 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Social share icons</h3>
+                  <p className="text-sm text-muted-foreground">WhatsApp, Facebook, LinkedIn, X, email, copy</p>
                 </div>
               </div>
             </CardContent>

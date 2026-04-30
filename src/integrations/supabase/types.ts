@@ -50,6 +50,79 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_portal_settings: {
+        Row: {
+          agent_id: string
+          hide_commission_rates: boolean
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          hide_commission_rates?: boolean
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          hide_commission_rates?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_portal_settings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_reminders: {
+        Row: {
+          agent_id: string
+          body: string | null
+          created_at: string
+          created_by: string
+          dismissed: boolean
+          entity_id: string | null
+          entity_type: string
+          id: string
+          remind_at: string
+          title: string
+        }
+        Insert: {
+          agent_id: string
+          body?: string | null
+          created_at?: string
+          created_by: string
+          dismissed?: boolean
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          remind_at?: string
+          title: string
+        }
+        Update: {
+          agent_id?: string
+          body?: string | null
+          created_at?: string
+          created_by?: string
+          dismissed?: boolean
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          remind_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_reminders_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           author_id: string
@@ -212,6 +285,51 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_assignments: {
+        Row: {
+          agent_id: string
+          assigned_by: string
+          course_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          note: string | null
+        }
+        Insert: {
+          agent_id: string
+          assigned_by: string
+          course_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          agent_id?: string
+          assigned_by?: string
+          course_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assignments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -411,6 +529,66 @@ export type Database = {
           phone?: string | null
           sort_order?: number
         }
+        Relationships: [        ]
+      }
+      portal_social_share_settings: {
+        Row: {
+          id: number
+          share_copy_link_enabled: boolean
+          share_email_enabled: boolean
+          share_facebook_enabled: boolean
+          share_linkedin_enabled: boolean
+          share_native_enabled: boolean
+          share_whatsapp_enabled: boolean
+          share_x_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          share_copy_link_enabled?: boolean
+          share_email_enabled?: boolean
+          share_facebook_enabled?: boolean
+          share_linkedin_enabled?: boolean
+          share_native_enabled?: boolean
+          share_whatsapp_enabled?: boolean
+          share_x_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          share_copy_link_enabled?: boolean
+          share_email_enabled?: boolean
+          share_facebook_enabled?: boolean
+          share_linkedin_enabled?: boolean
+          share_native_enabled?: boolean
+          share_whatsapp_enabled?: boolean
+          share_x_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      precon_cities: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
         Relationships: []
       }
       precon_assets: {
@@ -457,53 +635,109 @@ export type Database = {
           },
         ]
       }
+      precon_agent_project_notes: {
+        Row: {
+          agent_id: string
+          notes: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          notes?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          notes?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precon_agent_project_notes_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precon_agent_project_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "precon_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       precon_projects: {
         Row: {
+          city_id: string | null
+          commission_rate_percent: number | null
           created_at: string
           created_by: string
           description: string | null
           developer: string | null
           external_url: string | null
+          gallery_urls: Json
           id: string
           is_active: boolean
           location: string | null
           name: string
           price_range: string | null
+          property_type: string
           status: string
           thumbnail_url: string | null
           updated_at: string
         }
         Insert: {
+          city_id?: string | null
+          commission_rate_percent?: number | null
           created_at?: string
           created_by: string
           description?: string | null
           developer?: string | null
           external_url?: string | null
+          gallery_urls?: Json
           id?: string
           is_active?: boolean
           location?: string | null
           name: string
           price_range?: string | null
+          property_type?: string
           status?: string
           thumbnail_url?: string | null
           updated_at?: string
         }
         Update: {
+          city_id?: string | null
+          commission_rate_percent?: number | null
           created_at?: string
           created_by?: string
           description?: string | null
           developer?: string | null
           external_url?: string | null
+          gallery_urls?: Json
           id?: string
           is_active?: boolean
           location?: string | null
           name?: string
           price_range?: string | null
+          property_type?: string
           status?: string
           thumbnail_url?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "precon_projects_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "precon_cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_links: {
         Row: {

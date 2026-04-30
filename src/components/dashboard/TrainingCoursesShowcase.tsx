@@ -9,6 +9,7 @@ import { GraduationCap, Award } from "lucide-react";
 import { demoNewCourses, demoCompletedCourses } from "@/data/demoPortalContent";
 import remaxLogo from "@/assets/remax-excellence-logo.png";
 import { toast } from "@/hooks/use-toast";
+import CertificateShareActions from "@/components/dashboard/CertificateShareActions";
 
 interface Props {
   agentName?: string | null;
@@ -135,15 +136,24 @@ export default function TrainingCoursesShowcase({ agentName, recoNumber }: Props
             <p className="text-sm text-amber-400/95">{certTitle}</p>
             <p className="text-[11px] text-white/45">REMAX Excellence Canada · {new Date().getFullYear()}</p>
           </div>
-          <Button
-            className="w-full"
-            onClick={() => {
-              window.print();
-              toast({ title: "Print dialog", description: "Save as PDF from the print dialog." });
-            }}
-          >
-            Print / save as PDF
-          </Button>
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Share your achievement</p>
+            <CertificateShareActions
+              agentName={agentName || "Agent"}
+              reco={recoNumber || "—"}
+              courseTitle={certTitle || "Course"}
+            />
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => {
+                window.print();
+                toast({ title: "Print dialog", description: "Save as PDF from the print dialog." });
+              }}
+            >
+              Print / save as PDF
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
