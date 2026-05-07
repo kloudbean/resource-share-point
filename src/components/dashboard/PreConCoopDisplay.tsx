@@ -12,7 +12,7 @@ export function PreConCoopInline({ percent, className }: { percent: number; clas
   if (Number.isNaN(p)) return null;
   return (
     <div className={cn("mt-2 flex flex-wrap items-center gap-1.5", className)}>
-      <span className="text-sm font-semibold tabular-nums text-foreground">Co-op {p}%</span>
+      <span className="text-sm font-semibold tabular-nums text-foreground">{p}%</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -23,7 +23,7 @@ export function PreConCoopInline({ percent, className }: { percent: number; clas
             <HelpCircle className="h-3.5 w-3.5" strokeWidth={2} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+        <TooltipContent side="bottom" align="center" className="text-xs leading-relaxed">
           {COOP_COMMISSION_TOOLTIP}
         </TooltipContent>
       </Tooltip>
@@ -42,11 +42,11 @@ export function PreConCoopHeaderChip({ percent }: { percent: number }) {
           className="inline-flex h-8 shrink-0 cursor-help items-center gap-1 rounded-md border border-border/80 bg-muted/40 px-2.5 text-sm font-semibold tabular-nums text-foreground"
           tabIndex={0}
         >
-          Co-op {p}%
+          {p}%
           <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2} />
         </div>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-[260px] text-xs leading-relaxed">
+      <TooltipContent side="bottom" align="center" className="text-xs leading-relaxed">
         {COOP_COMMISSION_TOOLTIP}
       </TooltipContent>
     </Tooltip>

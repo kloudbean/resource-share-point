@@ -148,36 +148,83 @@
     font-size: 1.25rem;
   }
 
-  /* Month grid: allow wrapped titles so event text isn’t clipped */
-  .fc .fc-daygrid-day-frame {
-    min-height: 6.5rem;
-  }
-  @media (min-width: 768px) {
-    .fc .fc-daygrid-day-frame {
-      min-height: 7.25rem;
-    }
-  }
-  .fc .fc-daygrid-event {
-    margin-top: 2px;
-    font-size: 0.7rem;
-    line-height: 1.25;
-  }
-  .fc .fc-daygrid-event .fc-event-main {
-    white-space: normal;
-  }
-  .fc .fc-daygrid-block-event .fc-event-title,
-  .fc .fc-daygrid-event .fc-event-title {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    font-weight: 600;
-  }
-  .fc-h-event .fc-event-main-frame {
-    white-space: normal;
-  }
   .fc .fc-daygrid-more-link {
     font-size: 0.65rem;
     font-weight: 600;
+  }
+
+  /* Calendar readability improvements */
+  .fc .fc-daygrid-day-frame {
+    padding: 2px 3px 4px;
+  }
+
+  .fc .fc-daygrid-day-number {
+    padding: 6px 8px 2px 6px;
+    font-size: 0.82rem;
+  }
+
+  .fc .fc-daygrid-event-harness {
+    margin-top: 2px;
+  }
+
+  .fc .fc-daygrid-event {
+    max-width: calc(100% - 6px);
+  }
+
+  .fc .fc-daygrid-block-event {
+    margin: 2px 3px 0 0;
+    border-radius: 6px;
+  }
+
+  .fc .fc-daygrid-block-event .fc-event-main,
+  .fc .fc-daygrid-dot-event .fc-event-main {
+    padding: 1px 8px 1px 6px;
+    line-height: 1.25;
+    overflow: hidden !important;
+  }
+
+  .fc .fc-daygrid-event .fc-event-main-frame {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .fc .fc-event-title,
+  .fc .fc-event-time {
+    padding-right: 2px;
+  }
+
+  .fc .fc-daygrid-event .fc-event-time {
+    margin-right: 4px;
+    font-weight: 600;
+    flex: 0 0 auto;
+    font-size: 0.65rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .fc .fc-daygrid-event .fc-event-title-container {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .fc .fc-daygrid-event .fc-event-title {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 0.65rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .fc .fc-event-title {
+    font-size: 0.73rem;
+    font-weight: 500;
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    padding: 8px 4px;
   }
 
   .portal-nav-link {

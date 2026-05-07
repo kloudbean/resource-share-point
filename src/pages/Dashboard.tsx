@@ -15,7 +15,6 @@ import VendorDirectory from "@/components/dashboard/VendorDirectory";
 import SupportChat from "@/components/dashboard/SupportChat";
 import RoomBooking from "@/components/dashboard/RoomBooking";
 import PortalFooter from "@/components/dashboard/PortalFooter";
-import AdminPortalFeaturesOverview from "@/components/dashboard/AdminPortalFeaturesOverview";
 import { useAuth } from "@/hooks/useAuth";
 import { useAgentPortalSettings } from "@/hooks/useAgentPortalSettings";
 import { useAgentReminders } from "@/hooks/useAgentReminders";
@@ -107,20 +106,6 @@ const Dashboard = () => {
           joinedAt={agent?.created_at || null}
         />
 
-        <AdminPortalFeaturesOverview isAdmin={isAdmin} />
-
-        {PORTAL_SHOWCASE && (
-          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-100">
-            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-200">
-              Client preview
-            </span>
-            <span className="text-muted-foreground">
-              Rich demo content and Unsplash imagery are enabled for feedback. Set{" "}
-              <code className="rounded bg-muted px-1 text-xs">VITE_PORTAL_SHOWCASE=false</code> for database-only mode.
-            </span>
-          </div>
-        )}
-
         <section
           id="dashboard"
           className="scroll-mt-28 space-y-6 rounded-3xl border border-border/50 bg-card/40 p-5 shadow-sm backdrop-blur-sm md:p-8"
@@ -151,7 +136,13 @@ const Dashboard = () => {
         <Separator className="opacity-60" />
 
         <div className="rounded-3xl border border-border/40 bg-card/30 p-5 md:p-8">
-          <PreConSection agentId={agent?.id} hideCommissionRates={hideCommissionRates} />
+          <PreConSection
+            agentId={agent?.id}
+            agentName={agent?.full_name || null}
+            agentEmail={agent?.email || user?.email || null}
+            recoNumber={agent?.reco_number || null}
+            hideCommissionRates={hideCommissionRates}
+          />
         </div>
 
         <Separator className="opacity-60" />

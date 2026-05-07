@@ -2,28 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PreConCoopHeaderChip } from "@/components/dashboard/PreConCoopDisplay";
-import { Textarea } from "@/components/ui/textarea";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { usePreconListingNotes } from "@/hooks/usePreconListingNotes";
 import { buildListingShareUrl, buildListingSharePayloadForPrecon } from "@/lib/shareLandingPayload";
+import { PRECON_DOC_SECTION_ORDER, classifyPreconDocAsset, type PreconDocSectionId } from "@/lib/preconDocumentSections";
+import { cn } from "@/lib/utils";
 import SocialShareIconRow from "@/components/share/SocialShareIconRow";
 import {
   BarChart3,
   Bookmark,
-  Building2,
+  Download,
+  Eye,
   ExternalLink,
   FileText,
   ImageIcon,
-  Layers,
   MapPin,
+  Phone,
   Printer,
-  StickyNote,
 } from "lucide-react";
 
 export interface PreconListingProject {
@@ -41,6 +39,9 @@ export interface PreconListingProject {
   commission_rate_percent: number | null;
   precon_cities?: { id: string; name: string } | null;
   created_at?: string;
+  contact_phone?: string | null;
+  /** When false, co-op % is hidden from agents (cards, detail, share). */
+  commission_public?: boolean | null;
 }
 
 export interface PreconListingAsset {
@@ -97,6 +98,82 @@ type PreConListingDetailSheetProps = {
 
 const VIEW_KEY = (id: string) => `precon:${id}`;
 
+function safeDownloadName(title: string, fallback: string): string {
+  const base = title.replace(/[^\w\d.\-]+/g, "_").replace(/_+/g, "_").slice(0, 80);
+  return base || fallback;
+}
+
+async function downloadListingFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error("fetch failed");
+    const blob = await res.blob();
+    const obj = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = obj;
+    a.download = filename || "document";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(obj);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
+type FileKind = "pdf" | "docx" | "jpeg" | "png" | "other";
+
+function fileKindFromAsset(a: PreconListingAsset): FileKind {
+  const path = `${a.file_name} ${a.file_url}`.toLowerCase();
+  const t = (a.asset_type || "").toLowerCase();
+  if (/\.pdf(\?|#|$)/i.test(path) || t.includes("pdf")) return "pdf";
+  if (/\.docx(\?|#|$)/i.test(path) || t.includes("docx") || t.includes("word")) return "docx";
+  if (/\.doc(\?|#|$)/i.test(path)) return "docx";
+  if (/\.png(\?|#|$)/i.test(path) || t === "png") return "png";
+  if (/\.(jpe?g|jfif)(\?|#|$)/i.test(path) || t.includes("jpeg") || t.includes("jpg")) return "jpeg";
+  if (isImageUrl(a.file_url)) return "jpeg";
+  return "other";
+}
+
+function fileKindLabel(k: FileKind): string {
+  if (k === "pdf") return "PDF";
+  if (k === "docx") return "DOCX";
+  if (k === "jpeg") return "JPEG";
+  if (k === "png") return "PNG";
+  return "FILE";
+}
+
+function fileKindBadgeClass(k: FileKind): string {
+  if (k === "pdf") return "bg-red-600/90 text-white border-0";
+  if (k === "docx") return "bg-blue-600/90 text-white border-0";
+  if (k === "jpeg" || k === "png") return "bg-emerald-600/90 text-white border-0";
+  return "bg-slate-600/90 text-white border-0";
+}
+
+function defaultDownloadName(a: PreconListingAsset): string {
+  if (a.file_name?.trim()) return a.file_name.trim();
+  const k = fileKindFromAsset(a);
+  const ext = k === "pdf" ? "pdf" : k === "docx" ? "docx" : k === "png" ? "png" : k === "jpeg" ? "jpg" : "bin";
+  return `${safeDownloadName(a.title, "document")}.${ext}`;
+}
+
+function openFileForPrint(url: string) {
+  const w = window.open(url, "_blank", "noopener,noreferrer");
+  if (!w) {
+    toast({ variant: "destructive", title: "Pop-up blocked", description: "Allow pop-ups to print or save this file." });
+    return;
+  }
+  toast({
+    title: "Opened for printing",
+    description: "When the file loads, use your browser’s Print option (Ctrl+P).",
+  });
+}
+
+function sectionSortIndex(id: PreconDocSectionId): number {
+  const i = PRECON_DOC_SECTION_ORDER.findIndex((x) => x.id === id);
+  return i === -1 ? 999 : i;
+}
+
 export default function PreConListingDetailSheet({
   project,
   open,
@@ -108,12 +185,8 @@ export default function PreConListingDetailSheet({
   bookmarked,
   onToggleBookmark,
 }: PreConListingDetailSheetProps) {
-  const { notes, setNotes, save, loading: notesLoading, saving: notesSaving } = usePreconListingNotes(
-    agentId,
-    project?.id,
-    isDemo
-  );
   const [views30d, setViews30d] = useState<number | null>(null);
+  const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
 
   const galleryImages = useMemo(() => {
     if (!project) return [];
@@ -124,11 +197,22 @@ export default function PreConListingDetailSheet({
     return [...new Set(merged)];
   }, [project, projectAssets]);
 
-  const floorAssets = useMemo(() => projectAssets.filter(isFloorAsset), [projectAssets]);
-  const docAssets = useMemo(
-    () => projectAssets.filter((a) => !isGalleryAsset(a) && !isFloorAsset(a)),
-    [projectAssets]
-  );
+  const nonGalleryAssets = useMemo(() => projectAssets.filter((a) => !isGalleryAsset(a)), [projectAssets]);
+  /** Single ordered list: all project files (PDFs, docs, floor plans, etc.) in one horizontal row. */
+  const allFilesOneLine = useMemo(() => {
+    const list = [...nonGalleryAssets];
+    list.sort((a, b) => {
+      const da = sectionSortIndex(classifyPreconDocAsset(a));
+      const db = sectionSortIndex(classifyPreconDocAsset(b));
+      if (da !== db) return da - db;
+      return a.title.localeCompare(b.title);
+    });
+    return list;
+  }, [nonGalleryAssets]);
+
+  useEffect(() => {
+    setActiveGalleryIdx(0);
+  }, [project?.id, open]);
 
   useEffect(() => {
     if (!open || !project || !agentId || isDemo) {
@@ -153,6 +237,19 @@ export default function PreConListingDetailSheet({
       .then(({ count }) => setViews30d(count ?? 0));
   }, [open, project?.id, agentId, isDemo]);
 
+  const handleDownloadAll = async (list: PreconListingAsset[], label: string) => {
+    if (!list.length) return;
+    toast({
+      title: "Downloading",
+      description: `${list.length} file(s) from ${label} — allow multiple downloads if your browser asks.`,
+    });
+    for (const a of list) {
+      await downloadListingFile(a.file_url, defaultDownloadName(a));
+      await new Promise((r) => setTimeout(r, 380));
+    }
+    toast({ title: "Downloads finished", description: label });
+  };
+
   const handlePrint = () => {
     if (!project) return;
     const w = window.open("", "_blank");
@@ -160,10 +257,12 @@ export default function PreConListingDetailSheet({
       toast({ variant: "destructive", title: "Pop-up blocked", description: "Allow pop-ups to print this listing." });
       return;
     }
-    const coop =
-      !hideCommissionRates && project.commission_rate_percent != null && !Number.isNaN(Number(project.commission_rate_percent))
-        ? `<p><strong>Co-op:</strong> ${project.commission_rate_percent}%</p>`
-        : "";
+    const coopVisible =
+      !hideCommissionRates &&
+      project.commission_public !== false &&
+      project.commission_rate_percent != null &&
+      !Number.isNaN(Number(project.commission_rate_percent));
+    const coop = coopVisible ? `<p><strong>${project.commission_rate_percent}%</strong></p>` : "";
     w.document.write(`<!DOCTYPE html><html><head><title>${project.name}</title>
       <style>
         body{font-family:system-ui,sans-serif;padding:24px;max-width:720px;margin:0 auto;color:#111}
@@ -180,7 +279,7 @@ export default function PreConListingDetailSheet({
       ${coop}
       <p><strong>Description</strong></p>
       <p>${(project.description || "—").replace(/\n/g, "<br/>")}</p>
-      <p class="muted" style="margin-top:32px;font-size:12px">Printed from REMAX Excellence agent portal — for internal use.</p>
+      <p class="muted" style="margin-top:32px;font-size:12px">Printed from RE MAX Excellence agent portal — for internal use.</p>
       </body></html>`);
     w.document.close();
     w.focus();
@@ -188,20 +287,20 @@ export default function PreConListingDetailSheet({
     w.close();
   };
 
-  const saveNotes = async () => {
-    try {
-      await save(notes);
-      toast({ title: "Notes saved", description: isDemo ? "Stored on this device (demo)." : "Synced to your account." });
-    } catch {
-      toast({ variant: "destructive", title: "Could not save notes" });
-    }
-  };
-
   if (!project) return null;
+
+  const coopVisible =
+    !hideCommissionRates &&
+    project.commission_public !== false &&
+    project.commission_rate_percent != null &&
+    !Number.isNaN(Number(project.commission_rate_percent));
 
   const shareUrl = buildListingShareUrl(
     buildListingSharePayloadForPrecon(project, projectAssets, hideCommissionRates)
   );
+
+  const phone = project.contact_phone?.trim();
+  const mainGallerySrc = galleryImages.length ? galleryImages[Math.min(activeGalleryIdx, galleryImages.length - 1)]! : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -226,6 +325,14 @@ export default function PreConListingDetailSheet({
                   )}
                 </p>
               )}
+              {phone && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                  <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="underline-offset-4 hover:underline">
+                    {phone}
+                  </a>
+                </p>
+              )}
             </div>
             <Button type="button" size="icon" variant={bookmarked ? "default" : "outline"} onClick={onToggleBookmark} aria-label="Bookmark">
               <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-current" : ""}`} />
@@ -233,11 +340,7 @@ export default function PreConListingDetailSheet({
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{project.status}</Badge>
-            {!hideCommissionRates &&
-              project.commission_rate_percent != null &&
-              !Number.isNaN(Number(project.commission_rate_percent)) && (
-                <PreConCoopHeaderChip percent={Number(project.commission_rate_percent)} />
-              )}
+            {coopVisible && <PreConCoopHeaderChip percent={Number(project.commission_rate_percent)} />}
             <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5" />
               Print
@@ -253,54 +356,60 @@ export default function PreConListingDetailSheet({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <TabsList className="mx-4 mt-3 h-auto w-auto shrink-0 flex-wrap justify-start gap-1 bg-muted/40 p-1">
-            <TabsTrigger value="overview" className="gap-1 text-xs sm:text-sm">
-              <Building2 className="h-3.5 w-3.5" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="media" className="gap-1 text-xs sm:text-sm">
-              <ImageIcon className="h-3.5 w-3.5" />
-              Gallery &amp; plans
-            </TabsTrigger>
-            <TabsTrigger value="files" className="gap-1 text-xs sm:text-sm">
-              <FileText className="h-3.5 w-3.5" />
-              Files
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-1 text-xs sm:text-sm">
-              <StickyNote className="h-3.5 w-3.5" />
-              My notes
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-1 text-xs sm:text-sm">
-              <BarChart3 className="h-3.5 w-3.5" />
-              Activity
-            </TabsTrigger>
-          </TabsList>
-
-          <ScrollArea className="min-h-0 flex-1 px-4 pb-10 pt-3 sm:px-6">
-            <TabsContent value="overview" className="mt-0 space-y-4 pb-4">
-              {galleryImages.length > 0 && (
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {galleryImages.map((src, i) => (
-                      <CarouselItem key={`${src}-${i}`}>
-                        <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/30">
-                          <img src={src} alt="" className="max-h-64 w-full object-cover md:max-h-80" />
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-auto max-w-4xl space-y-10 px-4 pb-12 pt-5 sm:px-6">
+            {galleryImages.length > 0 && mainGallerySrc ? (
+              <section aria-label="Photo gallery" className="space-y-3">
+                <div>
+                  <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+                    <ImageIcon className="h-4 w-4 text-primary" />
+                    Photo gallery
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Main preview below — use thumbnails to switch photos; open full size in a new tab.
+                  </p>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-border/50 bg-muted/25 shadow-md ring-1 ring-black/[0.04] dark:ring-white/10">
+                  <div className="relative aspect-[20/11] min-h-[200px] w-full max-h-[min(48vh,440px)] bg-muted sm:aspect-[2/1]">
+                    <img src={mainGallerySrc} alt="" className="h-full w-full object-cover" />
+                    <a
+                      href={mainGallerySrc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute bottom-3 right-3 rounded-md bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:bg-background"
+                    >
+                      Open full size
+                    </a>
+                  </div>
                   {galleryImages.length > 1 && (
-                    <>
-                      <CarouselPrevious className="left-2" />
-                      <CarouselNext className="right-2" />
-                    </>
+                    <div className="flex gap-2 overflow-x-auto border-t border-border/50 bg-card/95 px-3 py-3 [scrollbar-width:thin]">
+                      {galleryImages.map((src, i) => (
+                        <button
+                          key={`${src}-${i}`}
+                          type="button"
+                          onClick={() => setActiveGalleryIdx(i)}
+                          className={cn(
+                            "relative h-14 w-[4.5rem] shrink-0 overflow-hidden rounded-lg ring-2 ring-offset-2 ring-offset-background transition",
+                            i === activeGalleryIdx
+                              ? "ring-primary opacity-100"
+                              : "ring-transparent opacity-75 hover:opacity-100",
+                          )}
+                        >
+                          <img src={src} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
                   )}
-                </Carousel>
+                </div>
+              </section>
+            ) : null}
+
+            <section aria-label="Summary" className="space-y-4">
+              {project.price_range && (
+                <p className="font-display text-xl font-semibold text-foreground">{project.price_range}</p>
               )}
-              {project.price_range && <p className="font-display text-xl font-semibold text-foreground">{project.price_range}</p>}
-              <p className="text-sm leading-relaxed text-muted-foreground">{project.description || "No description provided."}</p>
-              <ul className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-sm">
+              <p className="text-sm leading-relaxed text-muted-foreground sm:text-[15px]">{project.description || "No description provided."}</p>
+              <ul className="grid gap-3 rounded-xl border border-border/60 bg-muted/15 p-4 text-sm sm:grid-cols-2">
                 <li>
                   <span className="font-medium text-foreground">Property type:</span> {propertyTypeLabel(project.property_type)}
                 </li>
@@ -314,112 +423,110 @@ export default function PreConListingDetailSheet({
                   </li>
                 )}
               </ul>
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Share</p>
-                <SocialShareIconRow className="justify-start" preface={`Pre-con project: ${project.name}`} linkUrl={shareUrl} />
-              </div>
-              <Button className="w-full" onClick={() => toast({ title: "Interest registered", description: "CRM hook can be added here." })}>
-                Register client interest
-              </Button>
-            </TabsContent>
+            </section>
 
-            <TabsContent value="media" className="mt-0 space-y-6 pb-4">
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold">
-                  <ImageIcon className="h-4 w-4" />
-                  Photo gallery
-                </h3>
-                {galleryImages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No gallery images yet. Admins can add URLs in the project or upload assets tagged as gallery.</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {galleryImages.map((src, i) => (
-                      <a
-                        key={`${src}-${i}`}
-                        href={src}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="overflow-hidden rounded-lg border border-border/60"
-                      >
-                        <img src={src} alt="" className="aspect-[4/3] w-full object-cover transition hover:opacity-95" />
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-display text-sm font-semibold">
-                  <Layers className="h-4 w-4" />
-                  Floor plans
-                </h3>
-                {floorAssets.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No floor plans linked. In Admin → Pre-con, attach assets to this project with category &quot;Floor plans&quot; (or include
-                    &quot;floor&quot; in the title).
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {floorAssets.map((a) => (
-                      <li key={a.id}>
-                        <a
-                          href={a.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-sm font-medium text-primary hover:underline"
+            {allFilesOneLine.length > 0 ? (
+              <section aria-label="Project files" className="space-y-4">
+                <div className="flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Project files
+                  </h2>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full shrink-0 gap-1.5 sm:w-auto"
+                    onClick={() => void handleDownloadAll(allFilesOneLine, "all files")}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download all ({allFilesOneLine.length})
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  PDF, Word, JPEG, PNG, and floor plans in <strong className="text-foreground">one row</strong> — scroll sideways. View, download, or print
+                  each file.
+                </p>
+                <div className="-mx-2 rounded-xl border border-border/50 bg-muted/25 p-3 sm:-mx-0">
+                  <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+                    {allFilesOneLine.map((a) => {
+                      const kind = fileKindFromAsset(a);
+                      const showImagePreview =
+                        (kind === "jpeg" || kind === "png") && isImageUrl(a.file_url);
+                      return (
+                        <div
+                          key={a.id}
+                          className="flex w-[200px] shrink-0 snap-start flex-col rounded-xl border border-border/70 bg-card p-3 shadow-sm sm:w-[220px]"
                         >
-                          <FileText className="h-4 w-4 shrink-0" />
-                          {a.title}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </TabsContent>
+                          {showImagePreview ? (
+                            <div className="mb-2 aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted">
+                              <img src={a.file_url} alt="" className="h-full w-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="mb-2 flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-muted/80">
+                              <FileText className="h-10 w-10 text-muted-foreground/60" />
+                            </div>
+                          )}
+                          <Badge className={`w-fit text-[10px] font-bold ${fileKindBadgeClass(kind)}`}>{fileKindLabel(kind)}</Badge>
+                          <p className="mt-2 line-clamp-3 text-xs font-medium leading-snug text-foreground">{a.title}</p>
+                          {a.file_name && (
+                            <p className="mt-1 line-clamp-2 break-all text-[10px] text-muted-foreground">{a.file_name}</p>
+                          )}
+                          <div className="mt-auto flex justify-center gap-1 border-t border-border/50 pt-3">
+                            <Button variant="outline" size="icon" className="h-8 w-8" asChild title="View">
+                              <a href={a.file_url} target="_blank" rel="noopener noreferrer">
+                                <Eye className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Download"
+                              onClick={() => void downloadListingFile(a.file_url, defaultDownloadName(a))}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Print"
+                              onClick={() => openFileForPrint(a.file_url)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
-            <TabsContent value="files" className="mt-0 space-y-3 pb-4">
-              {docAssets.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No additional documents for this project. Attach PDFs and files in admin (per-project assets).</p>
-              ) : (
-                <ul className="space-y-2">
-                  {docAssets.map((a) => (
-                    <li key={a.id}>
-                      <a
-                        href={a.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-col gap-0.5 rounded-lg border border-border/60 bg-card px-3 py-2 text-sm hover:bg-muted/40"
-                      >
-                        <span className="font-medium text-foreground">{a.title}</span>
-                        <span className="text-xs text-muted-foreground">{a.category}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </TabsContent>
+            <section aria-label="Share listing" className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Share</p>
+              <SocialShareIconRow className="justify-start" preface={`Pre-con project: ${project.name}`} linkUrl={shareUrl} />
+            </section>
 
-            <TabsContent value="notes" className="mt-0 space-y-3 pb-4">
-              <p className="text-sm text-muted-foreground">
-                Private to you{isDemo ? " on this browser (demo)" : ""}. Other agents cannot see these notes.
-              </p>
-              <Textarea
-                placeholder="Buyer fit, deposit structure, follow-ups, builder rep contact…"
-                value={notes}
-                disabled={notesLoading}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={10}
-                className="min-h-[200px] resize-y"
-              />
-              <Button onClick={() => void saveNotes()} disabled={notesLoading || notesSaving}>
-                {notesSaving ? "Saving…" : "Save notes"}
-              </Button>
-            </TabsContent>
+            <Button
+              className="w-full max-w-4xl"
+              onClick={() => toast({ title: "Interest registered", description: "CRM hook can be added here." })}
+            >
+              Register client interest
+            </Button>
 
-            <TabsContent value="activity" className="mt-0 space-y-4 pb-4">
+            <section aria-label="Activity" className="space-y-3">
+              <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                Activity
+              </h2>
               {isDemo ? (
                 <p className="text-sm text-muted-foreground">
-                  Demo mode: view tracking and cloud notes are simulated locally. Sign in with a live project to record opens in Analytics.
+                  Demo mode: view tracking is simulated locally. Sign in with a live project to record opens in Analytics.
                 </p>
               ) : (
                 <>
@@ -434,9 +541,9 @@ export default function PreConListingDetailSheet({
                   </p>
                 </>
               )}
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
+            </section>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

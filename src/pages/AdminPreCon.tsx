@@ -53,6 +53,8 @@ interface Project {
   property_type: string;
   city_id: string | null;
   commission_rate_percent: number | null;
+  commission_public?: boolean | null;
+  contact_phone: string | null;
   external_url: string | null;
   thumbnail_url: string | null;
   gallery_urls?: unknown;
@@ -70,6 +72,8 @@ const emptyProject = (): Partial<Project> & { gallery_urls_input?: string } => (
   property_type: "condo",
   city_id: null,
   commission_rate_percent: null,
+  commission_public: true,
+  contact_phone: "",
   external_url: "",
   thumbnail_url: "",
   gallery_urls_input: "",
@@ -166,6 +170,8 @@ export default function AdminPreCon() {
         form.commission_rate_percent === null || form.commission_rate_percent === ("" as unknown as number)
           ? null
           : Number(form.commission_rate_percent),
+      commission_public: form.commission_public !== false,
+      contact_phone: form.contact_phone?.trim() || null,
       external_url: form.external_url?.trim() || null,
       thumbnail_url: form.thumbnail_url?.trim() || null,
       gallery_urls: galleryLines,
@@ -280,6 +286,8 @@ export default function AdminPreCon() {
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Co-op %</TableHead>
+                        <TableHead>Co-op visible</TableHead>
+                        <TableHead>Phone</TableHead>
                         <TableHead className="text-right">Edit</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -291,6 +299,8 @@ export default function AdminPreCon() {
                           <TableCell className="capitalize">{p.property_type}</TableCell>
                           <TableCell>{p.status}</TableCell>
                           <TableCell>{p.commission_rate_percent != null ? `${p.commission_rate_percent}%` : "—"}</TableCell>
+                          <TableCell>{p.commission_public === false ? "Hidden" : "Yes"}</TableCell>
+                          <TableCell className="max-w-[140px] truncate text-xs">{p.contact_phone?.trim() || "—"}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
                               <Pencil className="h-3.5 w-3.5" />
@@ -362,11 +372,12 @@ export default function AdminPreCon() {
                   <SelectContent>
                     <SelectItem value="selling">Now selling</SelectItem>
                     <SelectItem value="coming soon">Coming soon</SelectItem>
+                    <SelectItem value="Ready">Ready</SelectItem>
                     <SelectItem value="sold out">Sold out</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Co-op % (optional)</Label>
                 <Input
                   type="number"
@@ -381,7 +392,25 @@ export default function AdminPreCon() {
                     }))
                   }
                 />
+                <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">
+                  <Switch
+                    id="commission-public"
+                    checked={form.commission_public !== false}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, commission_public: v }))}
+                  />
+                  <Label htmlFor="commission-public" className="cursor-pointer text-xs font-normal leading-snug">
+                    Show co-op % to agents (off hides on listings, detail, and shared links)
+                  </Label>
+                </div>
               </div>
+            </div>
+            <div>
+              <Label>Listing phone (optional)</Label>
+              <Input
+                placeholder="e.g. (905) 555-0100 — shown to agents with click-to-call"
+                value={form.contact_phone ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))}
+              />
             </div>
             <div>
               <Label>Developer</Label>
@@ -402,6 +431,9 @@ export default function AdminPreCon() {
             <div>
               <Label>Thumbnail URL</Label>
               <Input value={form.thumbnail_url || ""} onChange={(e) => setForm((f) => ({ ...f, thumbnail_url: e.target.value }))} />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Recommended: <span className="font-medium">1600 x 900 px</span> (16:9). Minimum 1200 x 675 px for sharp listing cards.
+              </p>
             </div>
             <div>
               <Label>Gallery image URLs</Label>
@@ -411,6 +443,9 @@ export default function AdminPreCon() {
                 onChange={(e) => setForm((f) => ({ ...f, gallery_urls_input: e.target.value }))}
                 rows={3}
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Recommended: <span className="font-medium">1920 x 1080 px</span> (16:9). Keep all gallery images same ratio for a clean slider.
+              </p>
             </div>
             <div>
               <Label>External URL</Label>

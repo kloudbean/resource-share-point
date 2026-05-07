@@ -55,6 +55,10 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
+  const [clientPreviewCode, setClientPreviewCode] = useState("");
+  const [clientPreviewMode, setClientPreviewMode] = useState<"agent" | "admin">("agent");
+
+  const expectedPreviewCode = (import.meta.env.VITE_CLIENT_PREVIEW_CODE as string | undefined)?.trim() || "remax-demo";
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -236,6 +240,19 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleClientPreviewLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (clientPreviewCode.trim() !== expectedPreviewCode) {
+      toast({
+        variant: "destructive",
+        title: "Invalid preview code",
+        description: "Please enter the correct client preview access code.",
+      });
+      return;
+    }
+    navigate(clientPreviewMode === "admin" ? "/preview?mode=admin" : "/preview");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary p-4 relative overflow-hidden">
       {/* Background Pattern */}
@@ -270,9 +287,10 @@ const Auth = () => {
             </div>
           )}
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="login">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Register</TabsTrigger>
+              <TabsTrigger value="client-preview">Client Demo</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
@@ -533,6 +551,52 @@ const Auth = () => {
                 
                 <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
                   {loading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="client-preview">
+              <form onSubmit={handleClientPreviewLogin} className="space-y-4">
+                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Special showcase access for client demos. This does not grant real admin permissions.
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="client-preview-code" className="text-foreground font-medium">
+                    Preview access code
+                  </Label>
+                  <Input
+                    id="client-preview-code"
+                    type="password"
+                    placeholder="Enter demo code"
+                    value={clientPreviewCode}
+                    onChange={(e) => setClientPreviewCode(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground font-medium">Preview type</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setClientPreviewMode("agent")}
+                      className={`rounded-md border px-3 py-2 text-sm ${
+                        clientPreviewMode === "agent" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      Agent Portal View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClientPreviewMode("admin")}
+                      className={`rounded-md border px-3 py-2 text-sm ${
+                        clientPreviewMode === "admin" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      Admin Management View
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full h-11 font-semibold">
+                  Open client demo
                 </Button>
               </form>
             </TabsContent>

@@ -58,6 +58,8 @@ export type PreconShareProject = {
   external_url: string | null;
   property_type: string;
   commission_rate_percent: number | null;
+  /** When false, co-op % is omitted from shared links (per-listing admin control). */
+  commission_public?: boolean | null;
   precon_cities?: { name: string } | null;
 };
 
@@ -128,6 +130,7 @@ export function buildListingSharePayloadForPrecon(
     property_label: propertyTypeShareLabel(project.property_type),
     commission_percent:
       hideCommissionRates ||
+      project.commission_public === false ||
       project.commission_rate_percent == null ||
       Number.isNaN(Number(project.commission_rate_percent))
         ? null

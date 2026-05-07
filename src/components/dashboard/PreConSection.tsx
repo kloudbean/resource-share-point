@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   ChevronRight,
   SlidersHorizontal,
+  Phone,
 } from "lucide-react";
 import { parseISO, differenceInDays } from "date-fns";
 import HSTCalculator from "@/components/dashboard/HSTCalculator";
@@ -26,11 +27,12 @@ import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
-import { demoListings, demoAssetTiles, demoDocuments } from "@/data/demoPortalContent";
+import { demoListings, demoAssetTiles, demoDocuments, demoPreconAssetsByProject } from "@/data/demoPortalContent";
 import BuyerPresentationKit from "@/components/dashboard/BuyerPresentationKit";
 import { buildListingShareUrl, buildListingSharePayloadForPrecon } from "@/lib/shareLandingPayload";
 import SocialShareIconRow from "@/components/share/SocialShareIconRow";
 import { PreConCoopInline } from "@/components/dashboard/PreConCoopDisplay";
+import PreConWorksheetForm from "@/components/dashboard/PreConWorksheetForm";
 
 interface PreconProject {
   id: string;
@@ -48,6 +50,8 @@ interface PreconProject {
   commission_rate_percent: number | null;
   precon_cities?: { id: string; name: string } | null;
   gallery_urls?: unknown;
+  contact_phone?: string | null;
+  commission_public?: boolean | null;
 }
 
 interface PreconAsset {
@@ -72,6 +76,9 @@ const docLabels = [
 
 interface PreConSectionProps {
   agentId: string | undefined;
+  agentName?: string | null;
+  agentEmail?: string | null;
+  recoNumber?: string | null;
   /** When true, co-op % badges are hidden (e.g. showing portal to a buyer). */
   hideCommissionRates?: boolean;
 }
@@ -89,8 +96,21 @@ function propertyTypeLabel(t: string): string {
   return "Mixed";
 }
 
+/** Per-listing admin switch: when false, agents do not see co-op % on cards, detail, or shared links. */
+function isCoopVisibleToAgents(project: PreconProject, hideCommissionRates: boolean): boolean {
+  if (hideCommissionRates) return false;
+  if (project.commission_public === false) return false;
+  return true;
+}
+
+function shareAssetsForPreconProject(projectId: string): PreconAsset[] {
+  if (!PORTAL_SHOWCASE || !projectId.startsWith("demo-")) return [];
+  return (demoPreconAssetsByProject[projectId] ?? []) as PreconAsset[];
+}
+
 function demoListingToProject(l: (typeof demoListings)[number]): PreconProject {
   const galleryUrls = "galleryUrls" in l && Array.isArray((l as { galleryUrls?: string[] }).galleryUrls) ? (l as { galleryUrls: string[] }).galleryUrls : [];
+  const ext = l as typeof l & { contactPhone?: string; commissionPublic?: boolean };
   return {
     id: l.id,
     name: l.title,
@@ -107,10 +127,18 @@ function demoListingToProject(l: (typeof demoListings)[number]): PreconProject {
     commission_rate_percent: l.commissionPercent,
     precon_cities: { id: "demo", name: l.cityName },
     gallery_urls: galleryUrls,
+    contact_phone: ext.contactPhone ?? null,
+    commission_public: ext.commissionPublic !== false,
   };
 }
 
-export default function PreConSection({ agentId, hideCommissionRates = false }: PreConSectionProps) {
+export default function PreConSection({
+  agentId,
+  agentName,
+  agentEmail,
+  recoNumber,
+  hideCommissionRates = false,
+}: PreConSectionProps) {
   const [projects, setProjects] = useState<PreconProject[]>([]);
   const [assets, setAssets] = useState<PreconAsset[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -119,6 +147,7 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [worksheetOpen, setWorksheetOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -190,9 +219,13 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
       if (cityFilter !== "all" && p.city_id !== cityFilter) return false;
       if (propertyFilter !== "all" && p.property_type !== "all" && p.property_type !== propertyFilter) return false;
       if (statusFilter !== "all") {
-        const b = saleBucket(p.status);
-        if (statusFilter === "selling" && b !== "selling") return false;
-        if (statusFilter === "coming_soon" && b !== "coming_soon") return false;
+        if (statusFilter === "ready") {
+          if (!p.status.toLowerCase().includes("ready")) return false;
+        } else {
+          const b = saleBucket(p.status);
+          if (statusFilter === "selling" && b !== "selling") return false;
+          if (statusFilter === "coming_soon" && b !== "coming_soon") return false;
+        }
       }
       if (q) {
         const blob = `${p.name} ${p.developer || ""} ${p.location || ""}`.toLowerCase();
@@ -216,6 +249,14 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
       return true;
     });
   }, [cityFilter, propertyFilter, statusFilter, searchQuery]);
+
+  const detailAssets = useMemo((): PreconAsset[] => {
+    if (!detail) return [];
+    if (PORTAL_SHOWCASE && detail.id.startsWith("demo-")) {
+      return (demoPreconAssetsByProject[detail.id] ?? []) as PreconAsset[];
+    }
+    return assets.filter((a) => a.project_id === detail.id);
+  }, [detail, assets]);
 
   return (
     <>
@@ -280,6 +321,7 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="selling">Now selling</SelectItem>
                 <SelectItem value="coming_soon">Coming soon</SelectItem>
+                <SelectItem value="ready">Ready</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -295,12 +337,15 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {PORTAL_SHOWCASE &&
-            filteredDemoListings.map((l) => (
+            filteredDemoListings.map((l) => {
+              const demoProj = demoListingToProject(l);
+              const demoPhone = "contactPhone" in l ? (l as { contactPhone?: string }).contactPhone : undefined;
+              return (
               <Card
                 key={l.id}
                 className="group overflow-hidden border-border/80 bg-card/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <button type="button" className="relative block w-full text-left" onClick={() => setDetail(demoListingToProject(l))}>
+                <button type="button" className="relative block w-full text-left" onClick={() => setDetail(demoProj)}>
                   <div className="relative h-44 overflow-hidden">
                     <img src={l.image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
@@ -328,7 +373,19 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                     {l.cityName} · {l.propertyType === "condo" ? "Condo" : l.propertyType === "home" ? "Home" : "Townhome"}
                   </p>
                   <p className="mt-2 text-sm font-semibold text-primary">{l.price}</p>
-                  {!hideCommissionRates && l.commissionPercent != null && <PreConCoopInline percent={l.commissionPercent} />}
+                  {isCoopVisibleToAgents(demoProj, hideCommissionRates) &&
+                    l.commissionPercent != null && <PreConCoopInline percent={l.commissionPercent} />}
+                  {demoPhone?.trim() && (
+                    <p className="mt-2 flex items-center gap-1.5 text-sm">
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <a
+                        href={`tel:${demoPhone.replace(/[^\d+]/g, "")}`}
+                        className="font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {demoPhone}
+                      </a>
+                    </p>
+                  )}
                   <p className="mt-2 text-[11px] text-muted-foreground">
                     Sample listing for visual review — connect CRM for live inventory.
                   </p>
@@ -337,13 +394,14 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                       compact
                       preface={`Pre-con project: ${l.title}`}
                       linkUrl={buildListingShareUrl(
-                        buildListingSharePayloadForPrecon(demoListingToProject(l), [], hideCommissionRates)
+                        buildListingSharePayloadForPrecon(demoProj, shareAssetsForPreconProject(l.id), hideCommissionRates)
                       )}
                     />
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
 
           {!PORTAL_SHOWCASE &&
             filteredProjects.map((project) => (
@@ -403,11 +461,22 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                     {project.price_range && (
                       <p className="text-sm font-semibold text-accent mt-2">{project.price_range}</p>
                     )}
-                    {!hideCommissionRates &&
+                    {isCoopVisibleToAgents(project, hideCommissionRates) &&
                       project.commission_rate_percent != null &&
                       !Number.isNaN(Number(project.commission_rate_percent)) && (
                         <PreConCoopInline percent={Number(project.commission_rate_percent)} />
                       )}
+                    {project.contact_phone?.trim() && (
+                      <p className="mt-2 flex items-center gap-1.5 text-sm">
+                        <Phone className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <a
+                          href={`tel:${project.contact_phone.replace(/[^\d+]/g, "")}`}
+                          className="font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          {project.contact_phone}
+                        </a>
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-start">
                     <SocialShareIconRow
@@ -471,6 +540,9 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {demoAssetTiles.map((t) => (
+                (() => {
+                  const isWorksheet = t.title.toLowerCase().includes("worksheet");
+                  return (
                 <button
                   key={t.id}
                   type="button"
@@ -479,21 +551,39 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                       document.querySelector(t.href)?.scrollIntoView({ behavior: "smooth" });
                     } else if (t.action === "hst") {
                       document.getElementById("hst-calculator-anchor")?.scrollIntoView({ behavior: "smooth" });
+                    } else if (t.title.toLowerCase().includes("worksheet")) {
+                      setWorksheetOpen(true);
                     } else {
                       toast({ title: t.title, description: "Link your asset library in admin." });
                     }
                   }}
-                  className="group rounded-2xl border border-border/80 bg-card/90 p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+                  className={`group rounded-2xl border p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                    isWorksheet
+                      ? "border-primary/40 bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20 hover:border-primary/60"
+                      : "border-border/80 bg-card/90 hover:border-primary/25"
+                  }`}
                 >
+                  {isWorksheet && (
+                    <span className="inline-flex rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      Featured
+                    </span>
+                  )}
                   <span className="text-3xl">{t.icon}</span>
                   <p className="mt-3 font-display text-base font-bold text-foreground">{t.title}</p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t.sub}</p>
-                  <ChevronRight className="mt-4 h-4 w-4 text-muted-foreground transition group-hover:translate-x-1" />
+                  <div className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                    {isWorksheet ? "Open worksheet" : "Open"}
+                    <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                  </div>
                 </button>
+                );
+                })()
               ))}
             </div>
-            <div id="hst-calculator-anchor" className="mt-8 max-w-lg scroll-mt-28">
-              <HSTCalculator />
+            <div className="mt-8 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+              <div id="hst-calculator-anchor" className="scroll-mt-28 md:col-span-2">
+                <HSTCalculator />
+              </div>
             </div>
             <div className="mt-10">
               <h3 className="mb-4 font-display text-lg font-semibold text-foreground">Pre-con documents</h3>
@@ -531,8 +621,10 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
                 <ChevronRight className="h-5 w-5 self-end text-muted-foreground transition-transform group-hover:translate-x-1" />
               </a>
 
-              <div className="min-h-[140px] rounded-xl border-2 border-border bg-gradient-to-br from-primary/15 to-primary/5 p-2">
-                <HSTCalculator />
+              <div className="grid min-h-[140px] gap-4 sm:col-span-2 sm:grid-cols-2">
+                <div className="rounded-xl border-2 border-border bg-gradient-to-br from-primary/15 to-primary/5 p-2">
+                  <HSTCalculator />
+                </div>
               </div>
 
               <div className="flex min-h-[140px] flex-col justify-center rounded-xl border-2 border-border bg-gradient-to-br from-destructive/15 to-destructive/5 p-6">
@@ -543,15 +635,21 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
 
               <button
                 type="button"
-                className="group flex min-h-[140px] flex-col justify-between rounded-xl border-2 border-border bg-gradient-to-br from-red-900/20 to-red-950/10 p-6 text-left transition-all hover:shadow-md"
-                onClick={() => toast({ title: "Worksheet", description: "Link your branded Excel/PDF in admin storage." })}
+                className="group relative flex min-h-[140px] flex-col justify-between rounded-xl border-2 border-primary/35 bg-gradient-to-br from-primary/20 to-primary/5 p-6 text-left transition-all hover:border-primary/60 hover:shadow-md"
+                onClick={() => setWorksheetOpen(true)}
               >
+                <span className="absolute right-4 top-4 rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  Recommended
+                </span>
                 <FileSpreadsheet className="h-8 w-8 text-red-700 dark:text-red-400" />
                 <div>
                   <p className="font-display text-lg font-semibold">Pre-con worksheet</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Download branded worksheet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Fill and submit client worksheet details</p>
                 </div>
-                <ChevronRight className="h-5 w-5 self-end text-muted-foreground" />
+                <div className="inline-flex items-center gap-1 self-end text-xs font-semibold text-primary">
+                  Open worksheet
+                  <ChevronRight className="h-5 w-5 text-primary" />
+                </div>
               </button>
             </div>
 
@@ -635,9 +733,18 @@ export default function PreConSection({ agentId, hideCommissionRates = false }: 
         agentId={agentId}
         isDemo={(detail?.id ?? "").startsWith("demo-")}
         hideCommissionRates={hideCommissionRates}
-        projectAssets={detail ? assets.filter((a) => a.project_id === detail.id) : []}
+        projectAssets={detailAssets}
         bookmarked={detail ? bookmarks.includes(detail.id) : false}
         onToggleBookmark={() => detail && toggleBookmark(detail.id)}
+      />
+
+      <PreConWorksheetForm
+        open={worksheetOpen}
+        onOpenChange={setWorksheetOpen}
+        agentId={agentId}
+        agentName={agentName}
+        agentEmail={agentEmail}
+        recoNumber={recoNumber}
       />
     </>
   );

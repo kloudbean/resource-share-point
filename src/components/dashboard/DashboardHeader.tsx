@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import {
   LogOut,
   User,
@@ -22,8 +22,9 @@ import {
   Moon,
   Sun,
   Menu,
+  Percent,
 } from "lucide-react";
-import remaxLogo from "@/assets/remax-excellence-logo.png";
+import { REMAX_HEADER_LOGO_URL } from "@/config/brandLogo";
 
 const nav = [
   { label: "Dashboard", href: "#dashboard" },
@@ -67,6 +68,7 @@ const DashboardHeader = ({
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const coopHideSwitchId = useId();
 
   const linkCls =
     "text-sm font-medium text-primary-foreground/90 hover:text-primary-foreground transition-colors whitespace-nowrap";
@@ -93,9 +95,11 @@ const DashboardHeader = ({
           <div className="flex items-center gap-3 min-w-0">
             <a href="#top" className="shrink-0 flex items-center gap-2">
               <img
-                src={remaxLogo}
-                alt="REMAX Excellence"
-                className="h-12 w-auto max-h-[52px] sm:h-14 sm:max-h-[60px] md:h-16 md:max-h-none object-contain brightness-0 invert"
+                src={REMAX_HEADER_LOGO_URL}
+                alt="RE MAX Excellence Real Estate Brokerage"
+                className="h-11 w-auto max-h-[48px] max-w-[min(100%,320px)] sm:h-12 sm:max-h-[52px] md:h-14 md:max-h-[56px] object-contain object-left"
+                decoding="async"
+                referrerPolicy="no-referrer-when-downgrade"
               />
             </a>
             <div className="hidden sm:block border-l border-primary-foreground/20 pl-3 min-w-0">
@@ -168,13 +172,25 @@ const DashboardHeader = ({
                   </DropdownMenuItem>
                 )}
                 {onHideCommissionChange && (
-                  <DropdownMenuCheckboxItem
-                    checked={hideCommissionRates}
-                    onCheckedChange={(v) => onHideCommissionChange(!!v)}
+                  <DropdownMenuItem
+                    className="flex cursor-default items-center justify-between gap-3 rounded-sm px-2 py-2 focus:bg-accent"
                     onSelect={(e) => e.preventDefault()}
                   >
-                    Hide co-op % on listings
-                  </DropdownMenuCheckboxItem>
+                    <label
+                      htmlFor={coopHideSwitchId}
+                      className="flex flex-1 cursor-pointer items-center gap-2 text-sm leading-snug"
+                    >
+                      <Percent className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      <span>Hide co-op % on listings</span>
+                    </label>
+                    <Switch
+                      id={coopHideSwitchId}
+                      checked={hideCommissionRates}
+                      onCheckedChange={onHideCommissionChange}
+                      aria-label="Hide co-op percentage on listings"
+                      className="shrink-0"
+                    />
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout} className="text-destructive lg:hidden">

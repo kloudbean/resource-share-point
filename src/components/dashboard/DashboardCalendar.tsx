@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
-import type { EventClickArg, EventInput } from "@fullcalendar/core";
+import type { EventClickArg, EventContentArg, EventInput } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
@@ -21,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { CalendarDays, MapPin, Clock, Users, Bell, Plus, Mail } from "lucide-react";
+import { CalendarDays, MapPin, Clock, Users, Bell, Plus, Mail, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
@@ -65,6 +66,9 @@ const typeColor = (eventType: string) => {
   return "#dc2626";
 };
 
+const CALENDAR_HELP_TEXT =
+  "This calendar shows brokerage events, training, deadlines, and your personal reminders. Click an entry for details or RSVP. On busy days you may see +more — open it, or switch to Week or List to see every item.";
+
 const showcaseTypeColor = (t: string) => {
   switch (t) {
     case "precon":
@@ -81,6 +85,60 @@ const showcaseTypeColor = (t: string) => {
       return "#64748b";
   }
 };
+
+/** Hover popup with full text — month/week cells stay truncated for layout. */
+function CalendarEventContent(arg: EventContentArg) {
+  const title = arg.event.title?.trim() || "Event";
+  const timeText = arg.timeText?.trim() || "";
+  const ext = arg.event.extendedProps as {
+    kind?: "office" | "personal" | "showcase";
+    event?: OfficeEvent;
+    reminder?: PersonalReminder;
+    demo?: (typeof demoCalendarEvents)[0];
+  };
+
+  const metaLines: string[] = [];
+  if (ext.kind === "office" && ext.event) {
+    if (ext.event.description?.trim()) metaLines.push(ext.event.description.trim());
+    if (ext.event.location?.trim()) metaLines.push(`Location: ${ext.event.location.trim()}`);
+    metaLines.push(`Type: ${ext.event.event_type}`);
+  } else if (ext.kind === "personal" && ext.reminder?.note?.trim()) {
+    metaLines.push(ext.reminder.note.trim());
+  } else if (ext.kind === "showcase" && ext.demo) {
+    metaLines.push(`Category: ${ext.demo.type}`);
+  }
+
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <div className="fc-event-main fc-calendar-tooltip-trigger flex min-h-[1.1rem] min-w-0 w-full max-w-full cursor-default">
+          <div className="fc-event-main-frame flex min-w-0 flex-1 items-center gap-1 overflow-hidden px-0.5 py-px">
+            {!!timeText && (
+              <span className="fc-event-time shrink-0 text-[0.65rem] font-semibold leading-tight">{timeText}</span>
+            )}
+            <div className="fc-event-title-container min-w-0 flex-1 overflow-hidden">
+              <div className="fc-event-title truncate text-[0.65rem] leading-tight">{title}</div>
+            </div>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start" sideOffset={8} className="max-w-sm z-[400]">
+        <div className="space-y-1.5 text-left">
+          {!!timeText && (
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{timeText}</p>
+          )}
+          <p className="text-sm font-medium leading-snug">{title}</p>
+          {metaLines.map((line, i) => (
+            <p key={i} className="text-xs text-muted-foreground leading-relaxed">
+              {line}
+            </p>
+          ))}
+          <p className="border-t border-border/60 pt-1.5 text-[10px] text-muted-foreground">Click for full details</p>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export default function DashboardCalendar({ agentId, isAdmin }: DashboardCalendarProps) {
   const [events, setEvents] = useState<OfficeEvent[]>([]);
@@ -264,14 +322,33 @@ export default function DashboardCalendar({ agentId, isAdmin }: DashboardCalenda
 
   return (
     <Card className="overflow-hidden border-border/80 bg-card/90 shadow-md backdrop-blur-sm">
-      <CardHeader className="pb-2 flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle className="flex items-center gap-2 text-lg font-display">
-          <CalendarDays className="h-5 w-5 text-accent" />
-          Calendar &amp; Events
-        </CardTitle>
-        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setReminderOpen(true)}>
-          <Plus className="h-4 w-4" /> Add Reminder
-        </Button>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-display">
+            <CalendarDays className="h-5 w-5 text-accent" />
+            Calendar &amp; Events
+          </CardTitle>
+          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setReminderOpen(true)}>
+            <Plus className="h-4 w-4" /> Add Reminder
+          </Button>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>How this calendar works</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex shrink-0 rounded-full text-muted-foreground outline-none ring-offset-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Calendar tips"
+              >
+                <HelpCircle className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="start" className="text-xs leading-relaxed">
+              {CALENDAR_HELP_TEXT}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </CardHeader>
       <CardContent className="p-2 sm:p-4">
         <div className="min-h-[480px] fc-theme-standard">
@@ -288,11 +365,21 @@ export default function DashboardCalendar({ agentId, isAdmin }: DashboardCalenda
             aspectRatio={1.05}
             events={fcEvents}
             eventClick={onEventClick}
+            eventContent={CalendarEventContent}
             dayMaxEvents={4}
             moreLinkClick="popover"
             eventDidMount={(arg) => {
-              const t = arg.event.title;
-              if (t) arg.el.setAttribute("title", t);
+              const title = arg.event.title?.trim() || "Event";
+              const start = arg.event.start;
+              let label = title;
+              if (start && !arg.event.allDay) {
+                try {
+                  label = `${format(start, "h:mm a")} — ${title}`;
+                } catch {
+                  label = title;
+                }
+              }
+              arg.el.setAttribute("aria-label", label);
             }}
             nowIndicator
           />

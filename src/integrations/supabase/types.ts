@@ -674,7 +674,9 @@ export type Database = {
       precon_projects: {
         Row: {
           city_id: string | null
+          commission_public: boolean
           commission_rate_percent: number | null
+          contact_phone: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -693,7 +695,9 @@ export type Database = {
         }
         Insert: {
           city_id?: string | null
+          commission_public?: boolean
           commission_rate_percent?: number | null
+          contact_phone?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -712,7 +716,9 @@ export type Database = {
         }
         Update: {
           city_id?: string | null
+          commission_public?: boolean
           commission_rate_percent?: number | null
+          contact_phone?: string | null
           created_at?: string
           created_by?: string
           description?: string | null

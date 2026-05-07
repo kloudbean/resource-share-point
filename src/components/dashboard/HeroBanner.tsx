@@ -2,6 +2,7 @@ import { format, parseISO } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Flame, Sparkles } from "lucide-react";
 import { PORTAL_SHOWCASE } from "@/config/portalShowcase";
+import { REMAX_HEADER_LOGO_URL } from "@/config/brandLogo";
 import { demoWelcomeStats, DEMO_AGENT_TAGLINE } from "@/data/demoPortalContent";
 import { cn } from "@/lib/utils";
 
@@ -55,12 +56,12 @@ const HeroBanner = ({
         className="pointer-events-none absolute -bottom-20 left-1/4 h-56 w-56 rounded-full bg-[hsl(220_60%_50%/0.15)] blur-3xl"
         aria-hidden
       />
-      <div
-        className="pointer-events-none absolute right-[18%] top-8 text-[min(18vw,7rem)] font-display font-bold leading-none text-white/[0.04] select-none"
+      <img
+        src={REMAX_HEADER_LOGO_URL}
+        alt=""
         aria-hidden
-      >
-        RE/MAX
-      </div>
+        className="pointer-events-none absolute right-[14%] top-7 z-0 h-auto w-[min(44vw,390px)] select-none object-contain opacity-[0.09] grayscale brightness-200"
+      />
 
       <div className="relative z-10 px-5 py-8 sm:px-10 sm:py-10">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
@@ -117,12 +118,6 @@ const HeroBanner = ({
           </div>
         )}
 
-        {PORTAL_SHOWCASE && (
-          <p className="mt-6 flex items-center gap-2 text-xs text-white/40">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
-            Preview dataset — numbers illustrate the intended dashboard experience for stakeholder review.
-          </p>
-        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,9 @@ function getInitials(name: string) {
  */
 const ClientPreview = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [hideCommissionRates, setHideCommissionRates] = useState(false);
+  const isAdminManagementPreview = searchParams.get("mode") === "admin";
 
   return (
     <div id="top" className="min-h-screen bg-background flex flex-col">
@@ -47,7 +49,9 @@ const ClientPreview = () => {
             <Presentation className="h-4 w-4 text-primary shrink-0" />
             <span className="font-medium text-foreground">Stakeholder preview</span>
             <span className="text-muted-foreground hidden sm:inline">
-              Sample data for today&apos;s review — no login required.
+              {isAdminManagementPreview
+                ? "Admin management tour mode (read-only)."
+                : "Sample data for today&apos;s review — no login required."}
             </span>
           </div>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/")}>
@@ -76,18 +80,6 @@ const ClientPreview = () => {
       />
 
       <main className="flex-1 container mx-auto px-4 py-6 space-y-16">
-        {!PORTAL_SHOWCASE && (
-          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/30">
-            <CardContent className="pt-6">
-              <p className="text-amber-900 dark:text-amber-100 text-center text-sm font-medium">
-                For the full visual demo, set{" "}
-                <code className="rounded bg-background/80 px-1">VITE_PORTAL_SHOWCASE=true</code> (or remove{" "}
-                <code className="rounded bg-background/80 px-1">VITE_PORTAL_SHOWCASE=false</code>) and rebuild.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
         <HeroBanner
           agentName={PREVIEW_NAME}
           avatarUrl={null}
@@ -97,17 +89,6 @@ const ClientPreview = () => {
         />
 
         <AdminPortalFeaturesOverview isAdmin={false} />
-
-        {PORTAL_SHOWCASE && (
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-primary">
-              Client review build
-            </span>
-            <span className="text-muted-foreground">
-              Calendar, training, pre-con, vendors, and support are populated with sample content.
-            </span>
-          </div>
-        )}
 
         <section
           id="dashboard"

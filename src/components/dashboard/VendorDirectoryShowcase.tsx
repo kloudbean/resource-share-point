@@ -25,13 +25,15 @@ export default function VendorDirectoryShowcase() {
         </span>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted">
-          <Users className="h-6 w-6 text-muted-foreground" />
+      <div className="mb-6 flex flex-wrap items-start gap-3 rounded-2xl border border-[#003865]/25 bg-gradient-to-br from-[#0f2744]/[0.08] via-card to-[#c41e3a]/[0.06] p-4 shadow-sm md:p-5">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#003865] to-[#0f2744] text-white shadow-md ring-2 ring-[#c41e3a]/35">
+          <Users className="h-6 w-6" />
         </div>
         <div>
-          <div className="mb-2 h-1 w-8 rounded-sm bg-[hsl(4_80%_56%)]" aria-hidden />
-          <h2 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">Approved vendors</h2>
+          <div className="mb-2 flex h-1 w-12 rounded-sm bg-gradient-to-r from-[#003865] to-[#c41e3a]" aria-hidden />
+          <h2 className="font-display text-2xl font-bold tracking-tight text-[#0f2744] dark:text-foreground md:text-3xl">
+            Approved vendors
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Brokerage-approved trades and services — contact details for your deals
           </p>
